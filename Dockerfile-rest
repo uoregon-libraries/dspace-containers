@@ -1,0 +1,101 @@
+# The "deps" image is the same across all final images, though maven flags
+# can be customized if needed
+FROM docker.io/maven:3-eclipse-temurin-17 AS deps
+
+# Copy ONLY the POMs for this step. This will allow us to download all
+# dependencies only when they change, rather than re-pulling them on any
+# code/config change.
+WORKDIR /app
+ADD dspace-rest/pom.xml /app/
+ADD dspace-rest/dspace/pom.xml /app/dspace/
+ADD dspace-rest/dspace/modules/pom.xml /app/dspace/modules/
+ADD dspace-rest/dspace/modules/additions/pom.xml /app/dspace/modules/additions/
+ADD dspace-rest/dspace-api/pom.xml /app/dspace-api/
+ADD dspace-rest/dspace-iiif/pom.xml /app/dspace-iiif/
+ADD dspace-rest/dspace-oai/pom.xml /app/dspace-oai/
+ADD dspace-rest/dspace-rdf/pom.xml /app/dspace-rdf/
+ADD dspace-rest/dspace-server-webapp/pom.xml /app/dspace-server-webapp/
+ADD dspace-rest/dspace-services/pom.xml /app/dspace-services/
+ADD dspace-rest/dspace-sword/pom.xml /app/dspace-sword/
+ADD dspace-rest/dspace-swordv2/pom.xml /app/dspace-swordv2/
+
+# The dspace-installer directory will be written to /install
+RUN mkdir /install
+
+# Install deps without building code
+ENV TARGET_DIR=dspace-installer
+RUN mvn --no-transfer-progress verify \
+        -P-assembly \
+        -P-test-environment \
+        -Denforcer.skip=true \
+        -Dcheckstyle.skip=true \
+        -Dlicense.skip=true \
+        -Dxjc.skip=true \
+        -Dxml.skip=true
+
+# Destroy /app to force the code build to use the maven local cache (~/.m2)
+RUN rm -rf /app/*
+
+# Next add and build the Java source. We copy *just* required DSpace source
+# code, not all files in ".": changes to README, temp files, etc. shouldn't
+# require a full rebuild!
+ADD dspace-rest/checkstyle-suppressions.xml /app/checkstyle-suppressions.xml
+ADD dspace-rest/checkstyle.xml /app/checkstyle.xml
+ADD dspace-rest/pom.xml /app/pom.xml
+ADD dspace-rest/dspace /app/dspace
+ADD dspace-rest/dspace-api /app/dspace-api
+ADD dspace-rest/dspace-iiif /app/dspace-iiif
+ADD dspace-rest/dspace-oai /app/dspace-oai
+ADD dspace-rest/dspace-rdf /app/dspace-rdf
+ADD dspace-rest/dspace-server-webapp /app/dspace-server-webapp
+ADD dspace-rest/dspace-services /app/dspace-services
+ADD dspace-rest/dspace-sword /app/dspace-sword
+ADD dspace-rest/dspace-swordv2 /app/dspace-swordv2
+ADD dspace-rest/src /app/src
+
+# Build DSpace with no maven flags by default, as that's how the original was
+# set up for the "test" environment, which is what they used for dev... and
+# CLI... and I don't even know where the "non-test" image was meant to be used.
+ARG MAVEN_FLAGS=""
+RUN mvn --no-transfer-progress package ${MAVEN_FLAGS} && \
+  mv /app/dspace/target/dspace-installer/* /install
+
+
+
+# Ant builds the final jar files all services will use
+FROM docker.io/eclipse-temurin:17 AS ant_build
+
+COPY --from=deps /install /dspace-src
+
+ENV ANT_VERSION=1.10.13
+ENV ANT_HOME=/tmp/ant-$ANT_VERSION
+ENV PATH=$ANT_HOME/bin:$PATH
+
+RUN mkdir $ANT_HOME && \
+    curl --silent --show-error --location --fail --retry 5 --output /tmp/apache-ant.tar.gz \
+      https://archive.apache.org/dist/ant/binaries/apache-ant-${ANT_VERSION}-bin.tar.gz && \
+    tar -zx --strip-components=1 -f /tmp/apache-ant.tar.gz -C $ANT_HOME && \
+    rm /tmp/apache-ant.tar.gz
+
+WORKDIR /dspace-src
+RUN ant init_installation update_configs update_code update_webapps
+
+
+
+# Final stage just includes the built files
+FROM docker.io/tomcat:10-jre17
+
+# Need host command for "[dspace]/bin/make-handle-config"
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends host \
+    && apt-get purge -y --auto-remove \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ant_build /dspace /usr/local/dspace
+COPY conf/tomcat/server.xml /usr/local/tomcat/conf/server.xml
+COPY conf/tomcat/Catalina/localhost/server.xml /usr/local/tomcat/conf/Catalina/localhost/server.xml
+COPY conf/rest/migrate-db.sh /usr/local/scripts/migrate-db.sh
+COPY conf/rest/docker-entrypoint.sh /docker-entrypoint.sh
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["catalina.sh", "run"]

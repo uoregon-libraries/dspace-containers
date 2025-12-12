@@ -1,0 +1,9 @@
+# Ignore the source projects if present
+/dspace-rest
+/dspace-angular
+
+# Ignore compose overrides
+/compose.override.yml
+
+/exports
+!/export/db/.keep

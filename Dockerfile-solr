@@ -1,0 +1,9 @@
+FROM docker.io/solr:8.11-slim
+
+COPY conf/solr /var/local/solr-configsets
+RUN precreate-core authority /var/local/solr-configsets/authority
+RUN precreate-core oai /var/local/solr-configsets/oai
+RUN precreate-core search /var/local/solr-configsets/search
+RUN precreate-core statistics /var/local/solr-configsets/statistics
+RUN precreate-core qaevent /var/local/solr-configsets/qaevent
+RUN precreate-core suggestion /var/local/solr-configsets/suggestion
