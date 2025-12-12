@@ -1,0 +1,6 @@
+<?xml version='1.0'?>
+<Context
+    path="/"
+    docBase="/usr/local/dspace/webapps/server"
+    reloadable="true"
+    cachingAllowed="false"/>

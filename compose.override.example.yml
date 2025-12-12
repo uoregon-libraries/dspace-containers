@@ -1,0 +1,52 @@
+# Give your project a personalized name!
+name: not-dspace
+
+services:
+  web:
+    # Port 4000 is the main web interface, and must be exposed to clients in
+    # some way. I have no idea what 9876 is.
+    ports:
+      - 4000:4000
+      - 9876:9876
+
+    # Overrides for DSpace UI must start with "DSPACE_", replacing dots with
+    # underscores, and arrays are addressed by giving an index number. The
+    # HEADTAGS are here for reference, but they aren't actually being respected
+    # for some reason.
+    environment:
+      DSPACE_THEMES_0_NAME: custom
+      DSPACE_THEMES_0_HEADTAGS_0_TAGNAME: link
+      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_REL: icon
+      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_HREF: /path/to/favicon-32x32.png
+      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_SIZES: any
+      NODE_ENV: production
+
+  rest:
+    environment:
+      # Example maven flags from the original DSpace docker setup for faster
+      # build (but probably harder to debug? Comments didn't make it clear what
+      # the downside is)
+      MAVEN_FLAGS: -P-test-environment -Denforcer.skip=true -Dcheckstyle.skip=true -Dlicense.skip=true -Dxml.skip=true
+
+      # Give your site a fancy name!
+      dspace__P__name: 'My First DSpace'
+
+      # Set a non-default value for dspace.server.url or dspace.ui.url
+      dspace__P__server__P__url: http://localhost:8080/server
+      dspace__P__ui__P__url: http://localhost:4000
+
+    ports:
+      - 8080:8080
+
+    # Use a local dir for configs. Note that the environment overrides this!
+    # (e.g., solr__P__server, db__P__url, etc.)
+    volumes:
+      - ./dspace-rest/config:/dspace/config
+
+  db:
+    ports:
+      - 5432:5432
+
+  solr:
+    ports:
+      - 8983:8983

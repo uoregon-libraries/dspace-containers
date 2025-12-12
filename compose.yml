@@ -1,0 +1,97 @@
+name: dspace
+networks:
+  # We define a custom subnet so we know what network to allow DSpace to trust
+  dspacenet:
+    ipam:
+      config:
+        - subnet: 172.23.0.0/16
+
+services:
+  web:
+    build:
+      dockerfile: Dockerfile-angular
+    depends_on:
+      - rest
+    environment:
+      DSPACE_UI_SSL: 'false'
+      DSPACE_UI_HOST: dspace-angular
+      DSPACE_UI_PORT: '4000'
+      DSPACE_UI_NAMESPACE: /
+      DSPACE_REST_SSL: 'false'
+      DSPACE_REST_HOST: localhost
+      DSPACE_REST_PORT: 8080
+      DSPACE_REST_NAMESPACE: /server
+    volumes:
+      - angular-cache:/app/.angular
+      - node-modules:/app/node_modules
+    networks:
+      - dspacenet
+
+  rest:
+    build:
+      dockerfile: Dockerfile-rest
+
+    # The env key syntax may look odd, but it is how to override dspace.cfg
+    # settings via env variables.
+    #
+    #   - `__P__` becomes `.` (e.g. dspace__P__dir => dspace.dir)
+    #   - `__D__` becomes `-` (e.g. google__D__metadata => google-metadata)
+    #
+    # See https://github.com/DSpace/DSpace/blob/main/dspace/config/config-definition.xml
+    environment:
+      # Don't override any of these! They must be set to these values for the
+      # compose setup to work.
+      dspace__P__dir: /dspace
+      db__P__url: 'jdbc:postgresql://db:5432/dspace'
+      solr__P__server: http://solr:8983/solr
+
+      # You *could* override this if you know what you're doing. But you
+      # probably shouldn't.
+      LOGGING_CONFIG: /dspace/config/log4j2-container.xml
+
+      # This needs to match the dspacenet range; usually you shouldn't alter
+      # this, either, unless you're running multiple compose projects where
+      # network collisions can occur
+      proxies__P__trusted__P__ipranges: '172.23.0'
+
+      # You probably want to override these, or at least verify they make sense
+      # for your setup
+      dspace__P__name: 'DSpace Started with Docker Compose'
+      JAVA_OPTS: -Xmx2000m
+
+    depends_on:
+      - db
+      - solr
+    networks:
+      - dspacenet
+    volumes:
+      - assetstore:/dspace/assetstore
+
+  db:
+    build:
+      dockerfile: Dockerfile-pgsql
+    environment:
+      PGDATA: /pgdata
+      POSTGRES_USER: dspace
+      POSTGRES_PASSWORD: dspace
+      POSTGRES_DB: dspace
+    networks:
+      dspacenet:
+    volumes:
+      - db:/pgdata
+
+  solr:
+    build:
+      dockerfile: Dockerfile-solr
+    networks:
+      dspacenet:
+    volumes:
+      - solr:/var/solr/data
+    command: ["solr", "-f"]
+
+volumes:
+  assetstore: {}
+  db: {}
+  solr: {}
+  angular-cache: {}
+  node-modules: {}
