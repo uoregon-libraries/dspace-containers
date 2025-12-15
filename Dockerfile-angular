@@ -8,15 +8,18 @@ FROM docker.io/node:18-alpine
 RUN apk add --update python3 make g++ && rm -rf /var/cache/apk/*
 
 WORKDIR /app
-ADD dspace-angular /app
-EXPOSE 4000
 
-VOLUME /app/.angular
-VOLUME /app/node_modules
+# Only copy files we need for yarn so we can get dependencies installed before
+# the full app is added, busting the docker image cache
+COPY dspace-angular/package.json dspace-angular/yarn.lock /app
 
-# We run yarn install with an increased network timeout (5min) to avoid "ESOCKETTIMEDOUT" errors from hub.docker.com
+# We run yarn install with an increased network timeout (5min) to avoid
+# "ESOCKETTIMEDOUT" errors from hub.docker.com
 # See, for example https://github.com/yarnpkg/yarn/issues/5540
 RUN yarn install --network-timeout 300000
+
+# Finally, add all the code after the expensive operations
+ADD dspace-angular /app
 
 # When running in dev mode, 4GB of memory is required to build & launch the app.
 # This default setting can be overridden as needed in your shell, via an env file or in docker-compose.
