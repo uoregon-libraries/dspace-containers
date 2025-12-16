@@ -4,3 +4,6 @@
 
 # Ignore compose overrides
 /compose.override.yml
+
+/exports
+!/export/db/.keep
