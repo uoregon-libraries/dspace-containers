@@ -19,7 +19,6 @@ services:
       DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_REL: icon
       DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_HREF: /path/to/favicon-32x32.png
       DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_SIZES: any
-      NODE_ENV: production
 
   rest:
     environment:
