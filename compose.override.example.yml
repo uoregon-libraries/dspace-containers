@@ -3,9 +3,23 @@ name: not-dspace
 
 services:
   web:
+    environment:
+      IDP_BASE_URL: http://localhost:8081
     # The "web" service must be exposed to the host
     ports:
       - 8080:80
+
+  shibd:
+    environment:
+      IDP_LOGIN_URL: http://localhost:8081/sso
+      IDP_METADATA_URL: http://idp:8081/metadata
+
+  idp:
+    environment:
+      IDP_BASE_URL: http://localhost:8081
+      IDP_USERS: admin@example.org,foo@university.edu
+    ports:
+      - 8081:8081
 
   angular:
     # Overrides for DSpace UI must start with "DSPACE_", replacing dots with

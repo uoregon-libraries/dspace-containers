@@ -1,3 +1,41 @@
-FROM httpd:2.4
+# env-replace builds the simple environment var replacer, which modified
+# shibboleth2.xml using environment vars
+FROM golang:1 AS env-replace
+WORKDIR /app
+COPY ./conf/apache/env-replace.go /app/env-replace.go
+RUN go build -o env-replace ./env-replace.go
 
-COPY ./conf/apache/httpd.conf /usr/local/apache2/conf/httpd.conf
+
+
+# "base" installs the common elements we want for both shibd and apache. We do
+# install apache here even though it's not strictly needed for shibd just
+# because it makes the two sub-images share more layers, saving a bit of space,
+# and doesn't hurt anything.
+FROM rockylinux/rockylinux:9 AS base
+
+COPY --from=env-replace /app/env-replace /usr/bin/env-replace
+COPY ./conf/apache/shib-sp.repo /etc/yum.repos.d/shib-sp.repo
+RUN dnf update -y && dnf upgrade -y
+RUN dnf install -y shibboleth httpd
+
+COPY ./conf/apache/log.conf /etc/httpd/conf.d/00-log.conf
+COPY ./conf/apache/sb-proxy.conf /etc/httpd/conf.d/10-sb-proxy.conf
+RUN rm /etc/httpd/conf.d/welcome.conf
+
+COPY ./conf/apache/shibboleth2.base.xml /etc/shibboleth/shibboleth2.base.xml
+COPY ./conf/apache/entrypoint.sh /docker-entrypoint.sh
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+# shibd: standalone shibboleth listener
+FROM base AS shibd
+ENV SHIB_TCP_LISTENER_ADDRESS=0.0.0.0
+EXPOSE 1600
+CMD ["shibd", "-F"]
+
+# Apache httpd container - reverse proxy for the rest of the stack plus
+# shibboleth handler
+FROM base AS apache
+STOPSIGNAL SIGWINCH
+COPY conf/apache/httpd-foreground /usr/local/bin
+EXPOSE 80
+CMD ["httpd-foreground"]

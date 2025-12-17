@@ -12,6 +12,7 @@ projects. In our case, it looks a bit like this:
 ```bash
 git checkout git@github.com:uoregon-libraries/scholarsbank-angular.git ./dspace-angular
 git checkout git@github.com:uoregon-libraries/scholarsbank-rest.git ./dspace-rest
+git checkout git@github.com:uoregon-libraries/go-saml.git ./samlidp
 ```
 
 ## Build images

@@ -13,8 +13,36 @@ services:
     depends_on:
       - angular
       - rest
+      - shibd
+    networks:
+      dspacenet:
+        ipv4_address: 172.23.0.98
+    environment:
+      IDP_BASE_URL:
+      SHIB_TCP_LISTENER_ADDRESS: 172.23.0.99
+
+  shibd:
+    build:
+      dockerfile: Dockerfile-apache
+      target: shibd
+    networks:
+      dspacenet:
+        ipv4_address: 172.23.0.99
+    environment:
+      IDP_LOGIN_URL:
+      IDP_METADATA_URL:
+
+  idp:
+    build:
+      dockerfile: Dockerfile-idp
+    depends_on:
+      - web
     networks:
       - dspacenet
+    environment:
+      IDP_BASE_URL:
+      IDP_USERS: admin@example.org
+      IDP_SERVICE_URL: http://web/Shibboleth.sso/Metadata
 
   angular:
     build:

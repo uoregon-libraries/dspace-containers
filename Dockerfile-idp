@@ -1,0 +1,11 @@
+FROM golang:1-alpine AS build
+
+RUN apk add git make
+
+WORKDIR /app
+RUN git clone https://github.com/uoregon-libraries/go-saml -b feature/fix-timeout .
+RUN make
+
+FROM alpine AS app
+COPY --from=build /app/bin/idp /usr/bin/idp
+CMD ["idp"]
