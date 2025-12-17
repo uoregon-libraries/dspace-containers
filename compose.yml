@@ -9,13 +9,22 @@ networks:
 services:
   web:
     build:
+      dockerfile: Dockerfile-apache
+    depends_on:
+      - angular
+      - rest
+    networks:
+      - dspacenet
+
+  angular:
+    build:
       dockerfile: Dockerfile-angular
     depends_on:
       - rest
     environment:
       DSPACE_UI_SSL: 'false'
-      DSPACE_UI_HOST: dspace-angular
-      DSPACE_UI_PORT: '4000'
+      DSPACE_UI_HOST: localhost
+      DSPACE_UI_PORT: 4000
       DSPACE_UI_NAMESPACE: /
       DSPACE_REST_SSL: 'false'
       DSPACE_REST_HOST: localhost

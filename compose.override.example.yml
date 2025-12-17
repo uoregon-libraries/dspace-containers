@@ -3,12 +3,11 @@ name: not-dspace
 
 services:
   web:
-    # Port 4000 is the main web interface, and must be exposed to clients in
-    # some way. I have no idea what 9876 is.
+    # The "web" service must be exposed to the host
     ports:
-      - 4000:4000
-      - 9876:9876
+      - 8080:80
 
+  angular:
     # Overrides for DSpace UI must start with "DSPACE_", replacing dots with
     # underscores, and arrays are addressed by giving an index number. The
     # HEADTAGS are here for reference, but they aren't actually being respected
@@ -19,6 +18,10 @@ services:
       DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_REL: icon
       DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_HREF: /path/to/favicon-32x32.png
       DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_SIZES: any
+    # Uncomment to expose 4000 directly, e.g., to debug the frontend without
+    # going through Apache httpd
+    #ports:
+    #  - 4000:4000
 
   rest:
     environment:
@@ -30,12 +33,11 @@ services:
       # Give your site a fancy name!
       dspace__P__name: 'My First DSpace'
 
-      # Set a non-default value for dspace.server.url or dspace.ui.url
+      # These are mandatory, and must match the *public* URL, not the internal
+      # URL. If you use 8080 for the port in the "web" service above, these
+      # settings will work as-is.
       dspace__P__server__P__url: http://localhost:8080/server
-      dspace__P__ui__P__url: http://localhost:4000
-
-    ports:
-      - 8080:8080
+      dspace__P__ui__P__url: http://localhost:8080
 
     # Use a local dir for configs. Note that the environment overrides this!
     # (e.g., solr__P__server, db__P__url, etc.)

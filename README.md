@@ -43,4 +43,4 @@ docker compose run --rm -it rest /usr/local/dspace/bin/dspace create-administrat
 
 ## Start it up!
 
-Finally, start up the stack and browse to `http://localhost:4000`
+Finally, start up the stack and browse to `http://localhost:8080`
