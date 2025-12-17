@@ -41,6 +41,16 @@ You'll probably want a local admin for easier access:
 docker compose run --rm -it rest /usr/local/dspace/bin/dspace create-administrator -e admin@example.org -p adm -f Ad -l Min
 ```
 
+## Customize Compose Config
+
+Use `compose.override.example.yml` to create a compose override. Two very minor
+notes *you must not ignore*:
+
+- This is mandatory! If you don't provide an override, you won't have the app
+  exposed to the host machine, DSpace won't know its URLs, etc.
+- Do not just copy and paste! Some of the example settings only make sense in
+  certain contexts!
+
 ## Start it up!
 
 Finally, start up the stack and browse to `http://localhost:8080`
