@@ -43,11 +43,3 @@ services:
     # (e.g., solr__P__server, db__P__url, etc.)
     volumes:
       - ./dspace-rest/config:/dspace/config
-
-  db:
-    ports:
-      - 5432:5432
-
-  solr:
-    ports:
-      - 8983:8983
