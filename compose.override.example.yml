@@ -56,4 +56,4 @@ services:
     # Use a local dir for configs. Note that the environment overrides this!
     # (e.g., solr__P__server, db__P__url, etc.)
     volumes:
-      - ./dspace-rest/config:/dspace/config
+      - ./dspace-rest/dspace/config:/dspace/config
