@@ -9,6 +9,23 @@ networks:
 services:
   web:
     build:
+      dockerfile: Dockerfile-apache
+    depends_on:
+      - angular
+      - rest
+      - shibd
+    networks:
+      - dspacenet
+
+  shibd:
+    build:
+      dockerfile: Dockerfile-apache
+      target: shibd
+    networks:
+      - dspacenet
+
+  angular:
+    build:
       dockerfile: Dockerfile-angular
     depends_on:
       - rest

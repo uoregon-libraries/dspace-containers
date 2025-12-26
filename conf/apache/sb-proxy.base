@@ -1,0 +1,49 @@
+LogLevel debug
+<VirtualHost *:80>
+  ServerName localhost
+  ProxyPreserveHost On
+
+  # This is important for Shib
+  UseCanonicalName On
+
+  # The site is mostly public, so by default we don't require shib logins, but
+  # shib still needs to be "turned on"
+  <Location />
+    AuthType Shibboleth
+    ShibRequestSetting requireSession false
+    Require shibboleth
+  </Location>
+
+  # DSpace shib-specific login obviously requires a shib session
+  <Location /server/api/authn/shibboleth>
+    AuthType shibboleth
+    ShibRequestSetting requireSession true
+    Require valid-user
+  </Location>
+
+  # Ensure the proxy doesn't "steal" the main shib handler
+  <Location "/Shibboleth.sso">
+    SetHandler shib
+    Require all granted
+  </Location>
+  ProxyPass /Shibboleth.sso !
+
+  <Proxy *>
+    AddDefaultCharset Off
+    Require all granted
+  </Proxy>
+
+  # These Proxy settings are for the backend. They are described in the backend installation (see above)
+  # If you already have the backend running HTTPS, just append the new Proxy settings below.
+  # Proxy all HTTPS requests to "/server" from Apache to Tomcat via AJP connector
+  # (In this example: https://my.dspace.edu/server/ will display the REST API)
+  ProxyPass /server ajp://rest:8009/server retry=0
+  ProxyPassReverse /server ajp://rest:8009/server
+  ProxyIOBufferSize 65536
+
+  # [NEW FOR UI:] Proxy all HTTPS requests from Apache to PM2 on localhost, port 4000
+  # NOTE that this proxy URL must match the "ui" settings in your config.prod.yml
+  # (In this example: https://my.dspace.edu/ will display the User Interface)
+  ProxyPass / http://angular:4000/
+  ProxyPassReverse / http://angular:4000/
+</VirtualHost>
