@@ -27,6 +27,7 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 
 # shibd: standalone shibboleth listener
 FROM base AS shibd
+ENV SHIB_TCP_LISTENER_ADDRESS=0.0.0.0
 EXPOSE 1600
 CMD ["shibd", "-F"]
 

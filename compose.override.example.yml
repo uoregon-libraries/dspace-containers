@@ -1,11 +1,32 @@
 # Give your project a personalized name!
 name: not-dspace
 
+# You must pick something here! This is configured in overrides to avoid
+# potential collisions when standing up other compose stacks (or needing to run
+# two SB stacks at once)
+networks:
+  dspacenet:
+    ipam:
+      config:
+        - subnet: 172.23.78.0/24
+
+# "web" must be exposed to the host!
 services:
   web:
-    # The "web" service must be exposed to the host
+    # The ip addr must be in the configured subnet
+    networks:
+      dspacenet:
+        ipv4_address: 172.23.78.240
+    environment:
+      # Set this to match the shibd service's static IP below
+      SHIB_TCP_LISTENER_ADDRESS: 172.23.78.245
     ports:
       - 8080:80
+
+  shibd:
+    networks:
+      dspacenet:
+        ipv4_address: 172.23.78.245
 
   angular:
     # Overrides for DSpace UI must start with "DSPACE_", replacing dots with
