@@ -68,11 +68,6 @@ services:
       # probably shouldn't.
       LOGGING_CONFIG: /usr/local/dspace/config/log4j2-container.xml
 
-      # This needs to match the dspacenet range; usually you shouldn't alter
-      # this, either, unless you're running multiple compose projects where
-      # network collisions can occur
-      proxies__P__trusted__P__ipranges: '172.23.0'
-
       # You probably want to override these, or at least verify they make sense
       # for your setup
       dspace__P__name: 'DSpace Started with Docker Compose'
