@@ -58,13 +58,13 @@ services:
     environment:
       # Don't override any of these! They must be set to these values for the
       # compose setup to work.
-      dspace__P__dir: /dspace
+      dspace__P__dir: /usr/local/dspace
       db__P__url: 'jdbc:postgresql://db:5432/dspace'
       solr__P__server: http://solr:8983/solr
 
       # You *could* override this if you know what you're doing. But you
       # probably shouldn't.
-      LOGGING_CONFIG: /dspace/config/log4j2-container.xml
+      LOGGING_CONFIG: /usr/local/dspace/config/log4j2-container.xml
 
       # This needs to match the dspacenet range; usually you shouldn't alter
       # this, either, unless you're running multiple compose projects where
@@ -82,7 +82,7 @@ services:
     networks:
       - dspacenet
     volumes:
-      - assetstore:/dspace/assetstore
+      - assetstore:/usr/local/dspace/assetstore
 
   db:
     build:

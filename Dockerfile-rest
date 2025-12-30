@@ -91,7 +91,7 @@ RUN apt-get update \
     && apt-get purge -y --auto-remove \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=ant_build /dspace /usr/local/dspace
+COPY --from=ant_build /usr/local/dspace /usr/local/dspace
 COPY conf/tomcat/server.xml /usr/local/tomcat/conf/server.xml
 COPY conf/tomcat/Catalina/localhost/server.xml /usr/local/tomcat/conf/Catalina/localhost/server.xml
 COPY conf/rest/migrate-db.sh /usr/local/scripts/migrate-db.sh
