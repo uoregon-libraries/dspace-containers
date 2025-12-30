@@ -60,6 +60,10 @@ services:
       dspace__P__server__P__url: http://localhost:8080/server
       dspace__P__ui__P__url: http://localhost:8080
 
+      # Shib login URL. Note: you *must* provide the full URL, not just a path,
+      # otherwise DSpace will decide for some reason that it should be https!
+      authentication__D__shibboleth__P__lazysession__P__loginurl: "http://localhost:8080/Shibboleth.sso/Login"
+
     # Use a local dir for configs. Note that the environment overrides this!
     # (e.g., solr__P__server, db__P__url, etc.)
     volumes:
