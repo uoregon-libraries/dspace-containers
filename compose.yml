@@ -56,11 +56,7 @@ services:
     #
     # See https://github.com/DSpace/DSpace/blob/main/dspace/config/config-definition.xml
     environment:
-      # Don't override any of these! They must be set to these values for the
-      # compose setup to work.
-      dspace__P__dir: /usr/local/dspace
-      db__P__url: 'jdbc:postgresql://db:5432/dspace'
-      solr__P__server: http://solr:8983/solr
+      # You probably don't want to override these
       plugin__P__sequence__P__org__P__dspace__P__authenticate__P__AuthenticationMethod: "org.dspace.authenticate.ShibAuthentication,org.dspace.authenticate.PasswordAuthentication"
       authentication__D__shibboleth__P__lazysession__P__secure: "false"
 

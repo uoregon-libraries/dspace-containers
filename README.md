@@ -14,6 +14,17 @@ git checkout git@github.com:uoregon-libraries/scholarsbank-angular.git ./dspace-
 git checkout git@github.com:uoregon-libraries/scholarsbank-rest.git ./dspace-rest
 ```
 
+**Note**: on each image build (e.g., `docker compose build`), you will be
+adding most of the files from *your local copy* of those two repositories. If
+you aren't careful, this can be a **huge debugging nightmare**!
+
+**Do not use `local.cfg`**: this file is replaced with one that forces the
+stack to behave a certain way.
+
+If you're seeing odd issues when you build and run the stack, consider forcibly
+resetting the state of those repos (e.g., `git clean`, `git reset --hard`,
+etc.) and doing a full image rebuild.
+
 ## Build images
 
 Build the images, e.g., `docker compose build`. This can take a long time....

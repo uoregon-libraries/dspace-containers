@@ -2,6 +2,9 @@
 # can be customized if needed
 FROM docker.io/maven:3-eclipse-temurin-17 AS deps
 
+# Force configuration settings that we require for build and runtime
+ADD conf/rest/local.cfg /app/dspace/config/local.cfg
+
 # Copy ONLY the POMs for this step. This will allow us to download all
 # dependencies only when they change, rather than re-pulling them on any
 # code/config change.
@@ -52,6 +55,9 @@ ADD dspace-rest/dspace-services /app/dspace-services
 ADD dspace-rest/dspace-sword /app/dspace-sword
 ADD dspace-rest/dspace-swordv2 /app/dspace-swordv2
 ADD dspace-rest/src /app/src
+
+# Re-copy the required local.cfg
+ADD conf/rest/local.cfg /app/dspace/config/local.cfg
 
 # Build DSpace with no maven flags by default, as that's how the original was
 # set up for the "test" environment, which is what they used for dev... and
