@@ -17,6 +17,10 @@ services:
     networks:
       dspacenet:
         ipv4_address: 172.23.78.240
+    environment:
+      # This must be set to the host and port of the URL you use to visit
+      # Scholars' Bank, not any of the internal URLs!
+      APACHE_SERVERNAME: localhost:8080
     ports:
       - 8080:80
 

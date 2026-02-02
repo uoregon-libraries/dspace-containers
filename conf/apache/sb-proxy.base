@@ -1,6 +1,7 @@
 LogLevel debug
 <VirtualHost *:80>
-  ServerName localhost
+  # We need the public hostname here, not the internal hostname
+  ServerName {{.APACHE_SERVERNAME}}
   ProxyPreserveHost On
 
   <Proxy *>
