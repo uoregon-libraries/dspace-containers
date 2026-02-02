@@ -1,12 +1,12 @@
 # env-replace builds the simple environment var replacer, which modifies the
 # httpd config using environment vars
-FROM golang:1 AS env-replace
+FROM docker.io/golang:1 AS env-replace
 WORKDIR /app
 COPY ./env-replace.go /app/env-replace.go
 RUN go build -o env-replace ./env-replace.go
 
 
-FROM rockylinux/rockylinux:9
+FROM docker.io/rockylinux/rockylinux:9
 
 COPY --from=env-replace /app/env-replace /usr/bin/env-replace
 RUN dnf update -y && dnf upgrade -y
