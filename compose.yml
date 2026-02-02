@@ -14,7 +14,7 @@ services:
       - angular
       - rest
     networks:
-      - dspacenet
+      dspacenet: {}
 
   angular:
     build:
@@ -34,7 +34,7 @@ services:
       - angular-cache:/app/.angular
       - node-modules:/app/node_modules
     networks:
-      - dspacenet
+      dspacenet: {}
 
   rest:
     build:
@@ -61,7 +61,7 @@ services:
       - db
       - solr
     networks:
-      - dspacenet
+      dspacenet: {}
     volumes:
       - assetstore:/usr/local/dspace/assetstore
 
