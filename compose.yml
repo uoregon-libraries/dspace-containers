@@ -13,14 +13,6 @@ services:
     depends_on:
       - angular
       - rest
-      - shibd
-    networks:
-      - dspacenet
-
-  shibd:
-    build:
-      dockerfile: Dockerfile-apache
-      target: shibd
     networks:
       - dspacenet
 
@@ -56,10 +48,6 @@ services:
     #
     # See https://github.com/DSpace/DSpace/blob/main/dspace/config/config-definition.xml
     environment:
-      # You probably don't want to override these
-      plugin__P__sequence__P__org__P__dspace__P__authenticate__P__AuthenticationMethod: "org.dspace.authenticate.ShibAuthentication,org.dspace.authenticate.PasswordAuthentication"
-      authentication__D__shibboleth__P__lazysession__P__secure: "false"
-
       # You *could* override this if you know what you're doing. But you
       # probably shouldn't.
       LOGGING_CONFIG: /usr/local/dspace/config/log4j2-container.xml
