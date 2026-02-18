@@ -18,15 +18,11 @@ services:
       dspacenet:
         ipv4_address: 172.23.78.240
     environment:
-      # Set this to match the shibd service's static IP below
-      SHIB_TCP_LISTENER_ADDRESS: 172.23.78.245
+      # This must be set to the host and port of the URL you use to visit
+      # Scholars' Bank, not any of the internal URLs!
+      APACHE_SERVERNAME: localhost:8080
     ports:
       - 8080:80
-
-  shibd:
-    networks:
-      dspacenet:
-        ipv4_address: 172.23.78.245
 
   angular:
     # Overrides for DSpace UI must start with "DSPACE_", replacing dots with
@@ -62,7 +58,3 @@ services:
 
       # This needs to match the dspacenet range
       proxies__P__trusted__P__ipranges: "172.23.78.0/24"
-
-      # Shib login URL. Note: you *must* provide the full URL, not just a path,
-      # otherwise DSpace will decide for some reason that it should be https!
-      authentication__D__shibboleth__P__lazysession__P__loginurl: "http://localhost:8080/Shibboleth.sso/Login"
