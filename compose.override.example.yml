@@ -12,6 +12,11 @@ networks:
 
 # "web" must be exposed to the host!
 services:
+  # Only use this if you have a DB dump you want to import
+  db:
+    volumes:
+      - ./exports/db:/docker-entrypoint-initdb.d/
+
   web:
     # The ip addr must be in the configured subnet
     networks:
