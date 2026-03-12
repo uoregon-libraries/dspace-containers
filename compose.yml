@@ -21,7 +21,17 @@ services:
       dockerfile: Dockerfile-angular
     depends_on:
       - rest
+
+    # Overrides for DSpace UI must start with "DSPACE_", replacing dots with
+    # underscores, and arrays are addressed by giving an index number. The
+    # HEADTAGS are here for reference, but they aren't actually being respected
+    # for some reason.
     environment:
+      DSPACE_THEMES_0_NAME: custom
+      DSPACE_THEMES_0_HEADTAGS_0_TAGNAME: link
+      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_REL: icon
+      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_HREF: /path/to/favicon-32x32.png
+      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_SIZES: any
       DSPACE_UI_SSL: 'false'
       DSPACE_UI_HOST: localhost
       DSPACE_UI_PORT: 4000

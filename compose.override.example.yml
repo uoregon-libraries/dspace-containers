@@ -29,22 +29,6 @@ services:
     ports:
       - 8080:80
 
-  angular:
-    # Overrides for DSpace UI must start with "DSPACE_", replacing dots with
-    # underscores, and arrays are addressed by giving an index number. The
-    # HEADTAGS are here for reference, but they aren't actually being respected
-    # for some reason.
-    environment:
-      DSPACE_THEMES_0_NAME: custom
-      DSPACE_THEMES_0_HEADTAGS_0_TAGNAME: link
-      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_REL: icon
-      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_HREF: /path/to/favicon-32x32.png
-      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_SIZES: any
-    # Uncomment to expose 4000 directly, e.g., to debug the frontend without
-    # going through Apache httpd
-    #ports:
-    #  - 4000:4000
-
   rest:
     environment:
       # Example maven flags from the original DSpace docker setup for faster
