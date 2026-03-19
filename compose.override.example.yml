@@ -23,9 +23,12 @@ services:
       dspacenet:
         ipv4_address: 172.23.78.240
     environment:
-      # This must be set to the host and port of the URL you use to visit
-      # Scholars' Bank, not any of the internal URLs!
-      APACHE_SERVERNAME: localhost:8080
+      # If running behind another proxy, set that here. The default is just to
+      # trust private network ranges.
+      CADDY_TRUSTED_PROXIES: "static private_ranges <external proxies here>"
+
+      # This must be blank or the word "debug" - affects logging verbosity
+      CADDY_DEBUG: "debug"
     ports:
       - 8080:80
 

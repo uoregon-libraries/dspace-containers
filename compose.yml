@@ -9,7 +9,7 @@ networks:
 services:
   web:
     build:
-      dockerfile: Dockerfile-apache
+      dockerfile: Dockerfile-caddy
     depends_on:
       - angular
       - rest
