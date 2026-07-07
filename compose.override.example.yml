@@ -29,6 +29,32 @@ services:
     ports:
       - 8080:80
 
+  # The REST info must be the public/external URL, and usually has to match the
+  # rest service's "dspace.server.url" value
+  angular:
+    environment:
+      DSPACE_REST_SSL: 'false'
+      DSPACE_REST_HOST: localhost
+      DSPACE_REST_PORT: 8080
+      DSPACE_REST_NAMESPACE: /server
+
+      # Production: how many SSR worker processes pm2 runs. Defaults to
+      # "max", one per CPU core — cap it on shared hosts.
+      #PM2_INSTANCES: "4"
+
+    # Development alternative: run the live-reload dev server instead of the
+    # compiled production bundle. The bind mount lets you edit your
+    # dspace-angular checkout on the host and see changes without rebuilding;
+    # the named volumes keep the image's node_modules and the angular cache
+    # from being shadowed by the mount. After changing dependencies, rebuild
+    # the image and remove the node-modules volume so it gets reseeded.
+    #build:
+    #  target: dev
+    #volumes:
+    #  - ./dspace-angular:/app
+    #  - node-modules:/app/node_modules
+    #  - angular-cache:/app/.angular
+
   rest:
     environment:
       # Example maven flags from the original DSpace docker setup for faster
@@ -47,3 +73,8 @@ services:
 
       # This needs to match the dspacenet range
       proxies__P__trusted__P__ipranges: "172.23.78.0/24"
+
+# Required for the dev angular volumes above
+#volumes:
+#  node-modules: {}
+#  angular-cache: {}

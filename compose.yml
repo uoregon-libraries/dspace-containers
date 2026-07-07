@@ -19,30 +19,36 @@ services:
   angular:
     build:
       dockerfile: Dockerfile-angular
+      # The default is the compiled production (SSR) server. For development
+      # with the live-reload dev server, override the target to "dev" in your
+      # compose override (see compose.override.example.yml).
+      target: production
     depends_on:
       - rest
 
     # Overrides for DSpace UI must start with "DSPACE_", replacing dots with
-    # underscores, and arrays are addressed by giving an index number. The
-    # HEADTAGS are here for reference, but they aren't actually being respected
-    # for some reason.
+    # underscores, and arrays are addressed by giving an index number.
     environment:
       DSPACE_THEMES_0_NAME: custom
-      DSPACE_THEMES_0_HEADTAGS_0_TAGNAME: link
-      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_REL: icon
-      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_HREF: /path/to/favicon-32x32.png
-      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_SIZES: any
+
+      # Where the UI server listens inside the container; the web proxy
+      # forwards requests here
       DSPACE_UI_SSL: 'false'
-      DSPACE_UI_HOST: localhost
+      DSPACE_UI_HOST: 0.0.0.0
       DSPACE_UI_PORT: 4000
       DSPACE_UI_NAMESPACE: /
+
+      # Server-side rendering talks to REST directly over the internal
+      # network instead of going out through the public URL
+      DSPACE_REST_SSRBASEURL: http://rest:8080/server
+
+      # The *public* REST URL. These defaults work for a local stack exposed
+      # on port 8080; real deployments must override them (see
+      # compose.override.example.yml).
       DSPACE_REST_SSL: 'false'
       DSPACE_REST_HOST: localhost
       DSPACE_REST_PORT: 8080
       DSPACE_REST_NAMESPACE: /server
-    volumes:
-      - angular-cache:/app/.angular
-      - node-modules:/app/node_modules
     networks:
       dspacenet: {}
 
@@ -100,5 +106,3 @@ volumes:
   assetstore: {}
   db: {}
   solr: {}
-  angular-cache: {}
-  node-modules: {}
