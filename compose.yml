@@ -77,6 +77,7 @@ services:
       # You probably want to override these, or at least verify they make sense
       # for your setup
       dspace__P__name: 'DSpace Started with Docker Compose'
+      dspace__P__server__P__ssr__P__url: http://rest:8080/server
       JAVA_OPTS: -Xmx2000m
 
     depends_on:
