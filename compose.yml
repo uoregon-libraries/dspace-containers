@@ -1,5 +1,3 @@
-name: dspace
-
 # We define a custom subnet so we know what network to allow DSpace to trust.
 # Its netmask and the service IPs *must be set in the compose override*
 # otherwise DSpace cannot function!
