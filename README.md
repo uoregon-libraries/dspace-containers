@@ -1,8 +1,8 @@
 # DSpace Compose Wrapper Thing
 
 This is a compose setup with various Dockerfiles for recreating a fairly close
-approximation of our production setup for running DSpace. This is for
-*development*, not to stand up a new environment in compose.
+approximation of our production setup for running DSpace. This is *mostly* for
+development, but we're trying to make it more production-ready.
 
 ## Get projects
 
