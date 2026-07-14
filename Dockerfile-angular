@@ -1,7 +1,14 @@
-# This image will be published as dspace/dspace-angular
-# See https://github.com/DSpace/dspace-angular/tree/main/docker for usage details
+# Multi-stage build for the DSpace UI (dspace-angular)
+#
+# Targets:
+#   - production (default): compiled SSR bundle served by pm2 in cluster mode
+#   - dev: live-reload dev server (`yarn serve`); select it in your compose
+#     override with `build: { target: dev }` — see compose.override.example.yml
 
-FROM docker.io/node:18-alpine
+#
+# Shared base: node + toolchain + dependencies
+#
+FROM docker.io/node:18-alpine AS base
 
 # Ensure Python and other build tools are available
 # These are needed to install some node modules, especially on linux/arm64
@@ -18,17 +25,47 @@ COPY dspace-angular/package.json dspace-angular/yarn.lock /app
 # See, for example https://github.com/yarnpkg/yarn/issues/5540
 RUN yarn install --network-timeout 300000
 
-# Finally, add all the code after the expensive operations
-ADD dspace-angular /app
-
-# When running in dev mode, 4GB of memory is required to build & launch the app.
-# This default setting can be overridden as needed in your shell, via an env file or in docker-compose.
-# See Docker environment var precedence: https://docs.docker.com/compose/environment-variables/envvars-precedence/
+# The angular compiler needs ~4GB whether running the dev server or building
+# the production bundle
 ENV NODE_OPTIONS="--max_old_space_size=4096"
 
-# On startup, run in DEVELOPMENT mode (this defaults to live reloading enabled, etc).
-# Listen / accept connections from all IP addresses.
-# NOTE: At this time it is only possible to run Docker container in Production mode
-# if you have a public URL. See https://github.com/DSpace/dspace-angular/issues/1485
+#
+# Development: dev server with live reloading. Bind-mount your dspace-angular
+# checkout over /app (keeping node_modules and .angular as volumes) to edit
+# code without rebuilding the image.
+#
+FROM base AS dev
+ADD dspace-angular /app
 ENV NODE_ENV=development
 CMD ["yarn", "serve", "--host", "0.0.0.0"]
+
+#
+# Build: compile the production SSR bundle
+#
+FROM base AS build
+ADD dspace-angular /app
+RUN yarn build:prod
+
+#
+# Production: minimal runtime holding only the compiled bundle and runtime
+# config. pm2 runs the SSR server in cluster mode; PM2_INSTANCES controls the
+# worker count ("max" = one per CPU).
+#
+FROM docker.io/node:18-alpine AS production
+RUN npm install --global pm2
+
+COPY --chown=node:node --from=build /app/dist /app/dist
+COPY --chown=node:node --from=build /app/config /app/config
+COPY --chown=node:node conf/angular/dspace-ui.config.js /app/dspace-ui.config.js
+
+WORKDIR /app
+USER node
+ENV NODE_ENV=production
+EXPOSE 4000
+
+# "/" isn't in the default ssr.paths list, so this serves the cheap CSR index
+# rather than triggering a full server-side render every interval
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s \
+  CMD wget -q -O /dev/null http://127.0.0.1:4000/ || exit 1
+
+CMD ["pm2-runtime", "start", "dspace-ui.config.js"]

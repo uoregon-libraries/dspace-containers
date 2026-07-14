@@ -1,0 +1,10 @@
+# Keep host-side build artifacts out of the docker build context: they bloat
+# the context enormously and can poison in-image builds (e.g., a host
+# node_modules built for the wrong platform getting ADDed into the image).
+dspace-angular/node_modules
+dspace-angular/.angular
+dspace-angular/dist
+dspace-angular/.git
+
+# Never needed at build time (db dumps / config exports are runtime volumes)
+exports

@@ -1,0 +1,18 @@
+{
+	{$CADDY_DEBUG:}
+	servers {
+		trusted_proxies {$CADDY_TRUSTED_PROXIES:static private_ranges}
+	}
+}
+
+# Public listener: all requests start here
+:80 {
+	log {
+		level INFO
+	}
+
+	reverse_proxy /server/* rest:8080
+	reverse_proxy /* angular:4000 {
+		header_up Host localhost:4000       # Fixes angular thinking host is wrong
+	}
+}

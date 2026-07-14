@@ -1,0 +1,4 @@
+FROM docker.io/caddy:2-alpine
+
+COPY ./conf/caddy/Caddyfile /etc/caddy/Caddyfile
+EXPOSE 80

@@ -1,4 +1,5 @@
-# Give your project a personalized name!
+# Give your project a personalized name! Note that this doesn't work with
+# podman, as podman doesn't allow changing the project name in an override....
 name: not-dspace
 
 # You must pick something here! This is configured in overrides to avoid
@@ -23,11 +24,40 @@ services:
       dspacenet:
         ipv4_address: 172.23.78.240
     environment:
-      # This must be set to the host and port of the URL you use to visit
-      # Scholars' Bank, not any of the internal URLs!
-      APACHE_SERVERNAME: localhost:8080
+      # If running behind another proxy, set that here. The default is just to
+      # trust private network ranges.
+      CADDY_TRUSTED_PROXIES: "static private_ranges <external proxies here>"
+
+      # This must be blank or the word "debug" - affects logging verbosity
+      CADDY_DEBUG: "debug"
     ports:
       - 8080:80
+
+  # The REST info must be the public/external URL, and usually has to match the
+  # rest service's "dspace.server.url" value
+  angular:
+    environment:
+      DSPACE_REST_SSL: 'false'
+      DSPACE_REST_HOST: localhost
+      DSPACE_REST_PORT: 8080
+      DSPACE_REST_NAMESPACE: /server
+
+      # Production: how many SSR worker processes pm2 runs. Defaults to
+      # "max", one per CPU core — cap it on shared hosts.
+      #PM2_INSTANCES: "4"
+
+    # Development alternative: run the live-reload dev server instead of the
+    # compiled production bundle. The bind mount lets you edit your
+    # dspace-angular checkout on the host and see changes without rebuilding;
+    # the named volumes keep the image's node_modules and the angular cache
+    # from being shadowed by the mount. After changing dependencies, rebuild
+    # the image and remove the node-modules volume so it gets reseeded.
+    #build:
+    #  target: dev
+    #volumes:
+    #  - ./dspace-angular:/app
+    #  - node-modules:/app/node_modules
+    #  - angular-cache:/app/.angular
 
   rest:
     environment:
@@ -47,3 +77,8 @@ services:
 
       # This needs to match the dspacenet range
       proxies__P__trusted__P__ipranges: "172.23.78.0/24"
+
+# Required for the dev angular volumes above
+#volumes:
+#  node-modules: {}
+#  angular-cache: {}
