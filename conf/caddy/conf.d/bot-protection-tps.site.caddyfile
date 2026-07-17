@@ -1,0 +1,35 @@
+# Public: let challenged visitors hit the beacon
+handle /.tps/beacon {
+	reverse_proxy tps:18888
+}
+
+# Restricted: only the VPN can reach report/watch (ADMIN_SECRET is still
+# required on top of this).
+@admin path /.tps/*
+handle @admin {
+	@notallowed not client_ip {$CADDY_ADMIN_IP_RANGE}
+	respond @notallowed 404
+	reverse_proxy tps:18888
+}
+
+# These are our only easily detected direct requests: everything angular
+# seems to be hitting /server/api, so we can only catch bots on initial entry
+@protected {
+	path /search* /browse* / /home /info/*
+	not client_ip {$CADDY_INTERNAL_MONITOR_CIDR}
+}
+handle @protected {
+	reverse_proxy tps:18888
+}
+
+# Anything that's a browser navigation request (real browsers or bots faking
+# it) gets a challenge. In practice this won't catch much that wasn't caught
+# above, but it *might* catch a bot that's faking its headers.
+@navigations {
+	header Sec-Fetch-Mode navigate
+	header Sec-Fetch-Dest document
+	not client_ip {$CADDY_INTERNAL_MONITOR_CIDR}
+}
+handle @navigations {
+	reverse_proxy tps:18888
+}

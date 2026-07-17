@@ -5,14 +5,21 @@
 	}
 }
 
+# Optional extra top-level listeners: TPS relies on an internal, challenge-free
+# listener to be defined
+import /etc/caddy/conf.d/*.server.caddyfile
+
 # Public listener: all requests start here
 :80 {
-	log {
-		level INFO
-	}
+	# Custom site-level rules (e.g., TPS)
+	import /etc/caddy/conf.d/*.site.caddyfile
 
-	reverse_proxy /server/* rest:8080
-	reverse_proxy /* angular:4000 {
-		header_up Host localhost:4000       # Fixes angular thinking host is wrong
+	# All routing rules are externally imported so that when bot protection is
+	# set up, the routes are the same for the main listener or the internal
+	# "challenge succeeded" listener.
+	import /etc/caddy/sb-routing.caddyfile
+
+	log http-public-access {
+		level INFO
 	}
 }
