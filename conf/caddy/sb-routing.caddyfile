@@ -1,0 +1,4 @@
+reverse_proxy /server/* rest:8080
+reverse_proxy /* angular:4000 {
+	header_up Host localhost:4000
+}
