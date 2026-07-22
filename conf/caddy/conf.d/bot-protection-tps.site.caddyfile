@@ -15,7 +15,7 @@ handle @admin {
 # These are our only easily detected direct requests: everything angular
 # seems to be hitting /server/api, so we can only catch bots on initial entry
 @protected {
-	path /search* /browse* / /home /info/*
+	path /search* /browse* / /home
 	not client_ip {$CADDY_INTERNAL_MONITOR_CIDR}
 }
 handle @protected {
@@ -29,6 +29,9 @@ handle @protected {
 	header Sec-Fetch-Mode navigate
 	header Sec-Fetch-Dest document
 	not client_ip {$CADDY_INTERNAL_MONITOR_CIDR}
+
+	# We must *never* block the contact form in case a blocked user needs help!
+	not path /info/contact*
 }
 handle @navigations {
 	reverse_proxy tps:18888
