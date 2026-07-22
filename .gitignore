@@ -7,3 +7,8 @@
 
 /exports
 !/export/db/.keep
+
+# Built tools and assembled TPS templates (both fully derivable via make)
+/bin
+/tps-templates/challenge.go.html
+/tps-templates/failed.go.html
