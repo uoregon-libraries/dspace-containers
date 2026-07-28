@@ -48,6 +48,13 @@ services:
       #TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
       #TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA"
 
+    # For local dev this isn't strictly necessary, but it will help you test
+    # the generated TPS templates without pushing them straight to prod. In
+    # production, you *will* need to set this to something; maybe not this
+    # precise directory, but **something**.
+    volumes:
+      - ./tps-templates/:/var/local/tps/templates
+
   # The REST info must be the public/external URL, and usually has to match the
   # rest service's "dspace.server.url" value
   angular:

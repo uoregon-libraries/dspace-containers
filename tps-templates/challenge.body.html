@@ -8,18 +8,5 @@
   Safari in Lockdown Mode, using anonymizing VPNs, or other privacy / security
   tools, you might need to turn them off for Scholars' Bank to work.
 </p>
-<form id="tps-challenge-form" action="{{.PostAction}}" method="POST">
-  <input type="hidden" name="request_id" value="{{.RequestID}}" />
-  <div class="cf-turnstile" data-sitekey="{{.SiteKey}}" data-callback="onSuccess"></div>
-</form>
-<script>
-  // Send the "is the client JS-enabled?" beacon
-  try { navigator.sendBeacon('/.tps/beacon'); } catch (e) {}
 
-  // Submit the challenge form by id, not document.querySelector('form'):
-  // a custom template may embed other forms (e.g. a site search bar) ahead
-  // of this one, and querySelector('form') would submit the wrong one.
-  function onSuccess(token) {
-    document.getElementById('tps-challenge-form').submit();
-  }
-</script>
+<challenge-form />
