@@ -12,6 +12,8 @@ services:
       - angular
       - rest
       - tps
+    volumes:
+      - request-logs:/var/log/caddy
     networks:
       dspacenet: {}
 
@@ -127,6 +129,7 @@ services:
       - tps-data:/var/local/tps/data
 
 volumes:
+  request-logs: {}
   assetstore: {}
   db: {}
   solr: {}

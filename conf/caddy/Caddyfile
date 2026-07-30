@@ -3,6 +3,36 @@
 	servers {
 		trusted_proxies {$CADDY_TRUSTED_PROXIES:static private_ranges}
 	}
+
+	log requests-common-log {
+		level INFO
+		include http.log.access.requests
+		format transform `{request>remote_ip} - {user_id} [{ts}] "{request>method} {request>uri} {request>proto}" {status} {size} "{request>headers>Referer>[0]}" "{request>headers>User-Agent>[0]}"` {
+			time_format "02/Jan/2006:15:04:05 -0700"
+		}
+		output file /var/log/caddy/request.log {
+			# Don't rotate logs until they're big enough to need it, and keep 30 days
+			# worth, not a set number of files
+			roll_size 1GiB
+			roll_keep 0
+			roll_keep_for 720h
+		}
+	}
+
+	log requests-json {
+		level INFO
+		include http.log.access.requests
+		format json {
+			time_format rfc3339_nano
+		}
+		output file /var/log/caddy/request.json {
+			# Don't rotate logs until they're big enough to need it, and keep 30 days
+			# worth, not a set number of files
+			roll_size 1GiB
+			roll_keep 0
+			roll_keep_for 720h
+		}
+	}
 }
 
 # Optional extra top-level listeners: TPS relies on an internal, challenge-free
@@ -19,7 +49,5 @@ import /etc/caddy/conf.d/*.server.caddyfile
 	# "challenge succeeded" listener.
 	import /etc/caddy/sb-routing.caddyfile
 
-	log http-public-access {
-		level INFO
-	}
+	log requests
 }

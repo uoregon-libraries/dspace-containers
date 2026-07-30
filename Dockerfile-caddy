@@ -1,4 +1,5 @@
 FROM docker.io/caddy:2-alpine
 
+RUN caddy add-package github.com/caddyserver/transform-encoder
 COPY ./conf/caddy /etc/caddy
 EXPOSE 80
