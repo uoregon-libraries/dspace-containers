@@ -8,22 +8,19 @@
 #
 # Shared base: node + toolchain + dependencies
 #
-FROM docker.io/node:18-alpine AS base
+FROM docker.io/node:22-alpine AS base
 
 # Ensure Python and other build tools are available
 # These are needed to install some node modules, especially on linux/arm64
-RUN apk add --update python3 make g++ && rm -rf /var/cache/apk/*
+RUN apk --no-cache add python3 make g++
 
 WORKDIR /app
 
-# Only copy files we need for yarn so we can get dependencies installed before
+# Only copy files we need for npm so we can get dependencies installed before
 # the full app is added, busting the docker image cache
-COPY dspace-angular/package.json dspace-angular/yarn.lock /app
+COPY dspace-angular/package.json dspace-angular/package-lock.json /app
 
-# We run yarn install with an increased network timeout (5min) to avoid
-# "ESOCKETTIMEDOUT" errors from hub.docker.com
-# See, for example https://github.com/yarnpkg/yarn/issues/5540
-RUN yarn install --network-timeout 300000
+RUN npm install
 
 # The angular compiler needs ~4GB whether running the dev server or building
 # the production bundle
@@ -37,21 +34,21 @@ ENV NODE_OPTIONS="--max_old_space_size=4096"
 FROM base AS dev
 ADD dspace-angular /app
 ENV NODE_ENV=development
-CMD ["yarn", "serve", "--host", "0.0.0.0"]
+CMD ["npm", "run", "serve", "--host", "0.0.0.0"]
 
 #
 # Build: compile the production SSR bundle
 #
 FROM base AS build
 ADD dspace-angular /app
-RUN yarn build:prod
+RUN npm run build:prod
 
 #
 # Production: minimal runtime holding only the compiled bundle and runtime
 # config. pm2 runs the SSR server in cluster mode; PM2_INSTANCES controls the
 # worker count ("max" = one per CPU).
 #
-FROM docker.io/node:18-alpine AS production
+FROM docker.io/node:22-alpine AS production
 RUN npm install --global pm2
 
 COPY --chown=node:node --from=build /app/dist /app/dist
