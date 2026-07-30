@@ -123,8 +123,11 @@ services:
       TOKEN_LIFETIME: 4h
       TOKEN_REQUEST_BUDGET: 1000
       TOKEN_IP_SWITCH_COST: 10
+    volumes:
+      - tps-data:/var/local/tps/data
 
 volumes:
   assetstore: {}
   db: {}
   solr: {}
+  tps-data: {}
