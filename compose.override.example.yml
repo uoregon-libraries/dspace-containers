@@ -26,8 +26,27 @@ services:
 
       # This must be blank or the word "debug" - affects logging verbosity
       CADDY_DEBUG: "debug"
+
+      # Admin range(s) for users who are allowed to access the TPS admin section
+      CADDY_ADMIN_CIDR: 127.0.0.1 192.168.0.0/16
+
+      # Internal monitor range(s) who can bypass TPS. Use *very* carefully!
+      CADDY_INTERNAL_MONITOR_CIDR: 127.0.0.1 192.168.0.0/16
     ports:
       - 8080:80
+
+  # TPS: turnstile protection for various high-resource endpoints
+  tps:
+    environment:
+      TURNSTILE_SITE_KEY: "<cloudflare turnstile widget site key>"
+      TURNSTILE_SECRET_KEY: "<cloudflare turnstile widget secret key>"
+      JWT_SIGNING_KEY: "shhhhhh-this-is-very-secret"
+      ADMIN_SECRET: "choose-another-long-random-value"
+
+      # Use these for testing the "success" route - these are Turnstile test
+      # keys that make the challenge always auto-pass
+      #TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
+      #TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA"
 
   # The REST info must be the public/external URL, and usually has to match the
   # rest service's "dspace.server.url" value

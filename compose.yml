@@ -11,6 +11,7 @@ services:
     depends_on:
       - angular
       - rest
+      - tps
     networks:
       dspacenet: {}
 
@@ -107,7 +108,26 @@ services:
       - solr:/var/solr
     command: ["solr", "-f"]
 
+  tps:
+    build:
+      dockerfile: Dockerfile-tps
+    depends_on:
+      angular:
+        condition: service_started
+      rest:
+        condition: service_started
+    environment:
+      GIN_MODE: "release"
+      BIND_ADDR: ":18888"
+      PROXY_TARGET: "http://web:18081"
+      TOKEN_LIFETIME: 4h
+      TOKEN_REQUEST_BUDGET: 1000
+      TOKEN_IP_SWITCH_COST: 10
+    volumes:
+      - tps-data:/var/local/tps/data
+
 volumes:
   assetstore: {}
   db: {}
   solr: {}
+  tps-data: {}
