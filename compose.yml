@@ -122,6 +122,7 @@ services:
       GIN_MODE: "release"
       BIND_ADDR: ":18888"
       PROXY_TARGET: "http://web:18081"
+      LOG_RETENTION: "24h"
       TOKEN_LIFETIME: 4h
       TOKEN_REQUEST_BUDGET: 1000
       TOKEN_IP_SWITCH_COST: 10
