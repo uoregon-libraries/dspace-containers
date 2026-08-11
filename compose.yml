@@ -1,10 +1,15 @@
 # We define a custom subnet so we know what network to allow DSpace to trust.
-# Its netmask and the service IPs *must be set in the compose override*
-# otherwise DSpace cannot function!
+# Its netmask *must be set in the compose override* otherwise DSpace cannot
+# function!
 networks:
   dspacenet: {}
 
 services:
+  # Caddy runs on the host network so it sees real client IPs: rootless
+  # podman's port forwarder rewrites the source address on published ports, so
+  # a bridged proxy can never know who actually connected. Caddy reaches the
+  # other services through their loopback-published ports instead of the
+  # bridge network.
   web:
     build:
       dockerfile: Dockerfile-caddy
@@ -14,8 +19,7 @@ services:
       - tps
     volumes:
       - request-logs:/var/log/caddy
-    networks:
-      dspacenet: {}
+    network_mode: host
 
   angular:
     build:
@@ -110,9 +114,13 @@ services:
       - solr:/var/solr
     command: ["solr", "-f"]
 
+  # TPS is host-networked like Caddy: it has to proxy challenged requests back
+  # into Caddy's internal listener, which only exists on the host's loopback.
+  # Binding loopback-only keeps it unreachable from outside the machine.
   tps:
     build:
       dockerfile: Dockerfile-tps
+    network_mode: host
     depends_on:
       angular:
         condition: service_started
@@ -120,8 +128,8 @@ services:
         condition: service_started
     environment:
       GIN_MODE: "release"
-      BIND_ADDR: ":18888"
-      PROXY_TARGET: "http://web:18081"
+      BIND_ADDR: "127.0.0.1:18888"
+      PROXY_TARGET: "http://127.0.0.1:18081"
       LOG_RETENTION: "24h"
       TOKEN_LIFETIME: 4h
       TOKEN_REQUEST_BUDGET: 1000

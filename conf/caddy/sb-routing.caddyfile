@@ -1,4 +1,4 @@
-reverse_proxy /server/* rest:8080
-reverse_proxy /* angular:4000 {
+reverse_proxy /server/* {$CADDY_REST_UPSTREAM:127.0.0.1:8081}
+reverse_proxy /* {$CADDY_ANGULAR_UPSTREAM:127.0.0.1:4000} {
 	header_up Host localhost:4000
 }
