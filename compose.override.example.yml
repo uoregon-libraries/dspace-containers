@@ -7,18 +7,15 @@ networks:
       config:
         - subnet: 172.23.78.0/24
 
-# "web" must be exposed to the host!
 services:
   # Only use this if you have a DB dump you want to import
   db:
     volumes:
       - ./exports/db:/docker-entrypoint-initdb.d/
 
+  # Caddy uses host networking (see compose.yml) so it sees real client IPs,
+  # so there are no port mappings here: CADDY_HTTP_PORT *is* the host port.
   web:
-    # The ip addr must be in the configured subnet
-    networks:
-      dspacenet:
-        ipv4_address: 172.23.78.240
     environment:
       # If running behind another proxy, set that here. The default is just to
       # trust private network ranges.
@@ -32,8 +29,10 @@ services:
 
       # Internal monitor range(s) who can bypass TPS. Use *very* carefully!
       CADDY_INTERNAL_MONITOR_CIDR: 127.0.0.1 192.168.0.0/16
-    ports:
-      - 8080:80
+
+      # The host port for Caddy's public listener. Rootless podman can't bind
+      # ports below 1024 unless you lower net.ipv4.ip_unprivileged_port_start.
+      CADDY_HTTP_PORT: 8080
 
   # TPS: turnstile protection for various high-resource endpoints
   tps:
@@ -51,6 +50,10 @@ services:
   # The REST info must be the public/external URL, and usually has to match the
   # rest service's "dspace.server.url" value
   angular:
+    # Host-networked Caddy reaches the UI through this loopback-only port. If
+    # you change the host port, set CADDY_ANGULAR_UPSTREAM on "web" to match.
+    ports:
+      - 127.0.0.1:4000:4000
     environment:
       DSPACE_REST_SSL: 'false'
       DSPACE_REST_HOST: localhost
@@ -75,6 +78,11 @@ services:
     #  - angular-cache:/app/.angular
 
   rest:
+    # Host-networked Caddy reaches REST through this loopback-only port (8080
+    # is taken by Caddy itself). If you change the host port, set
+    # CADDY_REST_UPSTREAM on "web" to match.
+    ports:
+      - 127.0.0.1:8081:8080
     environment:
       # Example maven flags from the original DSpace docker setup for faster
       # build (but probably harder to debug? Comments didn't make it clear what
