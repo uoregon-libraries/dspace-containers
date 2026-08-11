@@ -3,8 +3,9 @@
 # See docs/install/bot-protection.md for usage and bot protection details.
 
 # Caddy runs on the host network, so this listener binds loopback only —
-# otherwise bots could hit it directly and bypass your protections.
-:18081 {
+# otherwise bots could hit it directly and bypass your protections. The port
+# must match what TPS proxies to; both come from CADDY_INTERNAL_PORT in .env.
+:{$CADDY_INTERNAL_PORT:18081} {
 	bind 127.0.0.1
 
 	import /etc/caddy/sb-routing.caddyfile

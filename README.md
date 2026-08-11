@@ -52,15 +52,22 @@ You'll probably want a local admin for easier access:
 docker compose run --rm -it rest /usr/local/dspace/bin/dspace create-administrator -e admin@example.org -p adm -f Ad -l Min
 ```
 
-## Customize Compose Config
+## Configure
 
-Use `compose.override.example.yml` to create a compose override. Two very minor
-notes *you must not ignore*:
+Copy `.env.example` to `.env` and edit it. This is **mandatory** — the stack
+refuses to start without one, because the TPS secrets deliberately have no
+defaults. All routine settings live there: the public URL, ports, network
+subnet, Caddy access ranges, and secrets. Values that have to agree (e.g.,
+the public URL the UI links to and the one REST reports) are derived from a
+single variable, so they can't drift.
 
-- This is mandatory! If you don't provide an override, you won't have the app
-  exposed to the host machine, DSpace won't know its URLs, etc.
-- Do not just copy and paste! Some of the example settings only make sense in
-  certain contexts!
+A `compose.override.yml` is *optional* and only needed for structural
+changes — the angular dev server or a database import mount. See
+`compose.override.example.yml`. Don't just copy and paste it wholesale; the
+examples only make sense in certain contexts.
+
+One caveat: variables exported in your shell override `.env` values silently,
+so a stray `export PUBLIC_PORT=...` in your environment wins.
 
 ## Start it up!
 
