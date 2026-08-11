@@ -2,8 +2,9 @@
 /dspace-rest
 /dspace-angular
 
-# Ignore compose overrides
+# Ignore compose overrides and per-checkout settings
 /compose.override.yml
+/.env
 
 /exports
 !/export/db/.keep

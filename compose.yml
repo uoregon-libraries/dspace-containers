@@ -1,15 +1,23 @@
-# We define a custom subnet so we know what network to allow DSpace to trust.
-# Its netmask *must be set in the compose override* otherwise DSpace cannot
-# function!
+# Routine configuration (public URL, ports, subnet, secrets) lives in `.env`
+# — copy `.env.example` and edit it. Values there are interpolated into this
+# file, so settings that have to agree (e.g., the public URL the UI links to
+# and the one REST reports, or the subnet DSpace trusts) are defined exactly
+# once and cannot drift. A compose override is only needed for structural
+# changes (dev-mode angular, database imports); see
+# compose.override.example.yml.
 networks:
-  dspacenet: {}
+  dspacenet:
+    ipam:
+      config:
+        - subnet: ${DSPACE_SUBNET:-172.23.78.0/24}
 
 services:
   # Caddy runs on the host network so it sees real client IPs: rootless
   # podman's port forwarder rewrites the source address on published ports, so
   # a bridged proxy can never know who actually connected. Caddy reaches the
   # other services through their loopback-published ports instead of the
-  # bridge network.
+  # bridge network. Those ports are derived from the same variables as the
+  # services' own bindings, so they always match.
   web:
     build:
       dockerfile: Dockerfile-caddy
@@ -20,6 +28,17 @@ services:
     volumes:
       - request-logs:/var/log/caddy
     network_mode: host
+    environment:
+      # Caddy's public listen port *is* the host port (host networking)
+      CADDY_HTTP_PORT: ${CADDY_HTTP_PORT:-8080}
+      CADDY_TRUSTED_PROXIES: ${CADDY_TRUSTED_PROXIES:-static private_ranges}
+      CADDY_DEBUG: ${CADDY_DEBUG:-}
+      CADDY_ADMIN_CIDR: ${CADDY_ADMIN_CIDR:-127.0.0.1}
+      CADDY_INTERNAL_MONITOR_CIDR: ${CADDY_INTERNAL_MONITOR_CIDR:-127.0.0.1}
+      CADDY_INTERNAL_PORT: ${CADDY_INTERNAL_PORT:-18081}
+      CADDY_ANGULAR_UPSTREAM: 127.0.0.1:${ANGULAR_HOST_PORT:-4000}
+      CADDY_REST_UPSTREAM: 127.0.0.1:${REST_HOST_PORT:-8081}
+      CADDY_TPS_UPSTREAM: 127.0.0.1:${TPS_HOST_PORT:-18888}
 
   angular:
     build:
@@ -30,6 +49,10 @@ services:
       target: production
     depends_on:
       - rest
+
+    # Host-networked Caddy reaches the UI through this loopback-only port
+    ports:
+      - "127.0.0.1:${ANGULAR_HOST_PORT:-4000}:4000"
 
     # Overrides for DSpace UI must start with "DSPACE_", replacing dots with
     # underscores, and arrays are addressed by giving an index number. The
@@ -49,16 +72,18 @@ services:
       DSPACE_UI_PORT: 4000
       DSPACE_UI_NAMESPACE: /
 
+      # How many SSR worker processes pm2 runs
+      PM2_INSTANCES: ${PM2_INSTANCES:-max}
+
       # Server-side rendering talks to REST directly over the internal
       # network instead of going out through the public URL
       DSPACE_REST_SSRBASEURL: http://rest:8080/server
 
-      # The *public* REST URL. These defaults work for a local stack exposed
-      # on port 8080; real deployments must override them (see
-      # compose.override.example.yml).
-      DSPACE_REST_SSL: 'false'
-      DSPACE_REST_HOST: localhost
-      DSPACE_REST_PORT: 8080
+      # The *public* REST URL, from the PUBLIC_* variables in .env. Do not
+      # change the namespace: Caddy's routing depends on it.
+      DSPACE_REST_SSL: "${PUBLIC_SSL:-false}"
+      DSPACE_REST_HOST: ${PUBLIC_HOST:-localhost}
+      DSPACE_REST_PORT: ${PUBLIC_PORT:-8080}
       DSPACE_REST_NAMESPACE: /server
     networks:
       dspacenet: {}
@@ -66,6 +91,13 @@ services:
   rest:
     build:
       dockerfile: Dockerfile-rest
+      args:
+        MAVEN_FLAGS: ${MAVEN_FLAGS:-}
+
+    # Host-networked Caddy reaches REST through this loopback-only port (the
+    # public port is taken by Caddy itself)
+    ports:
+      - "127.0.0.1:${REST_HOST_PORT:-8081}:8080"
 
     # The env key syntax may look odd, but it is how to override dspace.cfg
     # settings via env variables.
@@ -79,11 +111,20 @@ services:
       # probably shouldn't.
       LOGGING_CONFIG: /usr/local/dspace/config/log4j2-container.xml
 
-      # You probably want to override these, or at least verify they make sense
-      # for your setup
-      dspace__P__name: 'DSpace Started with Docker Compose'
+      dspace__P__name: ${DSPACE_NAME:-DSpace Started with Docker Compose}
+
+      # These must be the *public* URL, not the internal one — hence
+      # PUBLIC_URL, which the angular service's DSPACE_REST_* values are also
+      # built from
+      dspace__P__server__P__url: ${PUBLIC_URL:-http://localhost:8080}/server
+      dspace__P__ui__P__url: ${PUBLIC_URL:-http://localhost:8080}
+
+      # SSR requests arrive through the bridge network, so DSpace must trust
+      # it as a proxy; derived from the same variable as the subnet above
+      proxies__P__trusted__P__ipranges: ${DSPACE_SUBNET:-172.23.78.0/24}
+
       dspace__P__server__P__ssr__P__url: http://rest:8080/server
-      JAVA_OPTS: -Xmx2000m
+      JAVA_OPTS: ${REST_JAVA_OPTS:--Xmx2000m}
 
     depends_on:
       - db
@@ -128,12 +169,19 @@ services:
         condition: service_started
     environment:
       GIN_MODE: "release"
-      BIND_ADDR: "127.0.0.1:18888"
-      PROXY_TARGET: "http://127.0.0.1:18081"
+      BIND_ADDR: 127.0.0.1:${TPS_HOST_PORT:-18888}
+      PROXY_TARGET: http://127.0.0.1:${CADDY_INTERNAL_PORT:-18081}
       LOG_RETENTION: "24h"
       TOKEN_LIFETIME: 4h
       TOKEN_REQUEST_BUDGET: 1000
       TOKEN_IP_SWITCH_COST: 10
+
+      # Secrets have no defaults on purpose: the stack refuses to start until
+      # you create a .env defining them (see .env.example)
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:?copy .env.example to .env and set the TPS secrets}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:?copy .env.example to .env and set the TPS secrets}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:?copy .env.example to .env and set the TPS secrets}
+      ADMIN_SECRET: ${ADMIN_SECRET:?copy .env.example to .env and set the TPS secrets}
     volumes:
       - tps-data:/var/local/tps/data
 

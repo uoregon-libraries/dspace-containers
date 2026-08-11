@@ -1,105 +1,27 @@
-# You must pick something here! This is configured in overrides to avoid
-# potential collisions when standing up other compose stacks (or needing to run
-# two SB stacks at once)
-networks:
-  dspacenet:
-    ipam:
-      config:
-        - subnet: 172.23.78.0/24
+# A compose override is OPTIONAL: routine settings (public URL, ports,
+# subnet, secrets) all live in `.env` — see `.env.example`. Use an override
+# only for structural changes like the examples below.
 
 services:
-  # Only use this if you have a DB dump you want to import
+  # Only use this if you have a DB dump you want to import (see the README's
+  # "Get data" section)
   db:
     volumes:
       - ./exports/db:/docker-entrypoint-initdb.d/
 
-  # Caddy uses host networking (see compose.yml) so it sees real client IPs,
-  # so there are no port mappings here: CADDY_HTTP_PORT *is* the host port.
-  web:
-    environment:
-      # If running behind another proxy, set that here. The default is just to
-      # trust private network ranges.
-      CADDY_TRUSTED_PROXIES: "static private_ranges <external proxies here>"
-
-      # This must be blank or the word "debug" - affects logging verbosity
-      CADDY_DEBUG: "debug"
-
-      # Admin range(s) for users who are allowed to access the TPS admin section
-      CADDY_ADMIN_CIDR: 127.0.0.1 192.168.0.0/16
-
-      # Internal monitor range(s) who can bypass TPS. Use *very* carefully!
-      CADDY_INTERNAL_MONITOR_CIDR: 127.0.0.1 192.168.0.0/16
-
-      # The host port for Caddy's public listener. Rootless podman can't bind
-      # ports below 1024 unless you lower net.ipv4.ip_unprivileged_port_start.
-      CADDY_HTTP_PORT: 8080
-
-  # TPS: turnstile protection for various high-resource endpoints
-  tps:
-    environment:
-      TURNSTILE_SITE_KEY: "<cloudflare turnstile widget site key>"
-      TURNSTILE_SECRET_KEY: "<cloudflare turnstile widget secret key>"
-      JWT_SIGNING_KEY: "shhhhhh-this-is-very-secret"
-      ADMIN_SECRET: "choose-another-long-random-value"
-
-      # Use these for testing the "success" route - these are Turnstile test
-      # keys that make the challenge always auto-pass
-      #TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
-      #TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA"
-
-  # The REST info must be the public/external URL, and usually has to match the
-  # rest service's "dspace.server.url" value
-  angular:
-    # Host-networked Caddy reaches the UI through this loopback-only port. If
-    # you change the host port, set CADDY_ANGULAR_UPSTREAM on "web" to match.
-    ports:
-      - 127.0.0.1:4000:4000
-    environment:
-      DSPACE_REST_SSL: 'false'
-      DSPACE_REST_HOST: localhost
-      DSPACE_REST_PORT: 8080
-      DSPACE_REST_NAMESPACE: /server
-
-      # Production: how many SSR worker processes pm2 runs. Defaults to
-      # "max", one per CPU core — cap it on shared hosts.
-      #PM2_INSTANCES: "4"
-
-    # Development alternative: run the live-reload dev server instead of the
-    # compiled production bundle. The bind mount lets you edit your
-    # dspace-angular checkout on the host and see changes without rebuilding;
-    # the named volumes keep the image's node_modules and the angular cache
-    # from being shadowed by the mount. After changing dependencies, rebuild
-    # the image and remove the node-modules volume so it gets reseeded.
-    #build:
-    #  target: dev
-    #volumes:
-    #  - ./dspace-angular:/app
-    #  - node-modules:/app/node_modules
-    #  - angular-cache:/app/.angular
-
-  rest:
-    # Host-networked Caddy reaches REST through this loopback-only port (8080
-    # is taken by Caddy itself). If you change the host port, set
-    # CADDY_REST_UPSTREAM on "web" to match.
-    ports:
-      - 127.0.0.1:8081:8080
-    environment:
-      # Example maven flags from the original DSpace docker setup for faster
-      # build (but probably harder to debug? Comments didn't make it clear what
-      # the downside is)
-      MAVEN_FLAGS: -P-test-environment -Denforcer.skip=true -Dcheckstyle.skip=true -Dlicense.skip=true -Dxml.skip=true
-
-      # Give your site a fancy name!
-      dspace__P__name: 'My First DSpace'
-
-      # These are mandatory, and must match the *public* URL, not the internal
-      # URL. If you use 8080 for the port in the "web" service above, these
-      # settings will work as-is.
-      dspace__P__server__P__url: http://localhost:8080/server
-      dspace__P__ui__P__url: http://localhost:8080
-
-      # This needs to match the dspacenet range
-      proxies__P__trusted__P__ipranges: "172.23.78.0/24"
+  # Development alternative: run the live-reload dev server instead of the
+  # compiled production bundle. The bind mount lets you edit your
+  # dspace-angular checkout on the host and see changes without rebuilding;
+  # the named volumes keep the image's node_modules and the angular cache
+  # from being shadowed by the mount. After changing dependencies, rebuild
+  # the image and remove the node-modules volume so it gets reseeded.
+  #angular:
+  #  build:
+  #    target: dev
+  #  volumes:
+  #    - ./dspace-angular:/app
+  #    - node-modules:/app/node_modules
+  #    - angular-cache:/app/.angular
 
 # Required for the dev angular volumes above
 #volumes:
