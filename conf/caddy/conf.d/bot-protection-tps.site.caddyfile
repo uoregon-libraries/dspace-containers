@@ -7,7 +7,7 @@ handle /.tps/beacon {
 # required on top of this).
 @admin path /.tps/*
 handle @admin {
-	@notallowed not client_ip {$CADDY_ADMIN_IP_RANGE}
+	@notallowed not client_ip {$CADDY_ADMIN_CIDR}
 	respond @notallowed 404
 	reverse_proxy tps:18888
 }
