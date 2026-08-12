@@ -1,10 +1,8 @@
-# A compose override is OPTIONAL: routine settings (public URL, ports,
-# subnet, secrets) all live in `.env` — see `.env.example`. Use an override
-# only for structural changes like the examples below.
+# A compose override is optional. Config is generally done in `.env`, so this
+# is basically for structural setup.
 
 services:
-  # Only use this if you have a DB dump you want to import (see the README's
-  # "Get data" section)
+  # Only use this if you have a DB dump you want to import
   db:
     volumes:
       - ./exports/db:/docker-entrypoint-initdb.d/

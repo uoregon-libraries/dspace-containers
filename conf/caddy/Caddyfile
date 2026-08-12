@@ -40,9 +40,8 @@
 import /etc/caddy/conf.d/*.server.caddyfile
 
 # Public listener: all requests start here. The port is the *host* port, since
-# Caddy runs with host networking; rootless podman can't bind ports below 1024
-# without a sysctl tweak, so dev setups override this to something high.
-:{$CADDY_HTTP_PORT:80} {
+# Caddy runs with host networking.
+:{$CADDY_HTTP_PORT} {
 	# Custom site-level rules (e.g., TPS)
 	import /etc/caddy/conf.d/*.site.caddyfile
 

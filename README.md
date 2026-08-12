@@ -54,20 +54,15 @@ docker compose run --rm -it rest /usr/local/dspace/bin/dspace create-administrat
 
 ## Configure
 
-Copy `.env.example` to `.env` and edit it. This is **mandatory** — the stack
-refuses to start without one, because the TPS secrets deliberately have no
-defaults. All routine settings live there: the public URL, ports, network
-subnet, Caddy access ranges, and secrets. Values that have to agree (e.g.,
-the public URL the UI links to and the one REST reports) are derived from a
-single variable, so they can't drift.
+Copy `.env.example` to `.env` and edit it. This is **mandatory**. All
+per-environment settings live in `.env`, and you need to understand them and
+set them for your setup. **Note**: variables exported in your shell override
+`.env` values silently. For dev systems where the environment can be easily
+polluted, be careful to check for collisions.
 
-A `compose.override.yml` is *optional* and only needed for structural
-changes — the angular dev server or a database import mount. See
-`compose.override.example.yml`. Don't just copy and paste it wholesale; the
-examples only make sense in certain contexts.
-
-One caveat: variables exported in your shell override `.env` values silently,
-so a stray `export PUBLIC_PORT=...` in your environment wins.
+A `compose.override.yml` is optional and only needed for structural changes:
+angular's live-reload, volume overrides, etc. See
+`compose.override.example.yml`.
 
 ## Start it up!
 

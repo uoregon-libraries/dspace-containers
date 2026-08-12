@@ -1,10 +1,12 @@
-# Routine configuration (public URL, ports, subnet, secrets) lives in `.env`
-# — copy `.env.example` and edit it. Values there are interpolated into this
-# file, so settings that have to agree (e.g., the public URL the UI links to
-# and the one REST reports, or the subnet DSpace trusts) are defined exactly
-# once and cannot drift. A compose override is only needed for structural
-# changes (dev-mode angular, database imports); see
-# compose.override.example.yml.
+# Configuration lives in `.env` and is interpolated here to avoid var
+# duplication and keep all per-environment configuration central.
+#
+# - DO NOT use an override for *any* environment vars or you risk settings
+#   drift, which can bite you in awful ways.
+# - DO NOT alter ports in a compose override, use settings. We bind nearly
+#   everything to loopback. It's necessary for Caddy to expose the ports, but
+#   *critical* for security to keep them bound to the loopback interface.
+
 networks:
   dspacenet:
     ipam:
@@ -12,12 +14,10 @@ networks:
         - subnet: ${DSPACE_SUBNET:-172.23.78.0/24}
 
 services:
-  # Caddy runs on the host network so it sees real client IPs: rootless
-  # podman's port forwarder rewrites the source address on published ports, so
-  # a bridged proxy can never know who actually connected. Caddy reaches the
-  # other services through their loopback-published ports instead of the
-  # bridge network. Those ports are derived from the same variables as the
-  # services' own bindings, so they always match.
+  # Caddy *runs on the host network* in order to see actual client IPs. It
+  # sucks, we risk collisions, but it's necessary: we need to know IPs to let
+  # site monitors bypass TPS, allow load testing to bypass TPS, log correctly
+  # in case of abuse, etc.
   web:
     build:
       dockerfile: Dockerfile-caddy
@@ -29,7 +29,6 @@ services:
       - request-logs:/var/log/caddy
     network_mode: host
     environment:
-      # Caddy's public listen port *is* the host port (host networking)
       CADDY_HTTP_PORT: ${CADDY_HTTP_PORT:-8080}
       CADDY_TRUSTED_PROXIES: ${CADDY_TRUSTED_PROXIES:-static private_ranges}
       CADDY_DEBUG: ${CADDY_DEBUG:-}
@@ -49,8 +48,6 @@ services:
       target: production
     depends_on:
       - rest
-
-    # Host-networked Caddy reaches the UI through this loopback-only port
     ports:
       - "127.0.0.1:${ANGULAR_HOST_PORT:-4000}:4000"
 
@@ -93,9 +90,6 @@ services:
       dockerfile: Dockerfile-rest
       args:
         MAVEN_FLAGS: ${MAVEN_FLAGS:-}
-
-    # Host-networked Caddy reaches REST through this loopback-only port (the
-    # public port is taken by Caddy itself)
     ports:
       - "127.0.0.1:${REST_HOST_PORT:-8081}:8080"
 
@@ -107,22 +101,11 @@ services:
     #
     # See https://github.com/DSpace/DSpace/blob/main/dspace/config/config-definition.xml
     environment:
-      # You *could* override this if you know what you're doing. But you
-      # probably shouldn't.
       LOGGING_CONFIG: /usr/local/dspace/config/log4j2-container.xml
-
       dspace__P__name: ${DSPACE_NAME:-DSpace Started with Docker Compose}
-
-      # These must be the *public* URL, not the internal one — hence
-      # PUBLIC_URL, which the angular service's DSPACE_REST_* values are also
-      # built from
       dspace__P__server__P__url: ${PUBLIC_URL:-http://localhost:8080}/server
       dspace__P__ui__P__url: ${PUBLIC_URL:-http://localhost:8080}
-
-      # SSR requests arrive through the bridge network, so DSpace must trust
-      # it as a proxy; derived from the same variable as the subnet above
       proxies__P__trusted__P__ipranges: ${DSPACE_SUBNET:-172.23.78.0/24}
-
       dspace__P__server__P__ssr__P__url: http://rest:8080/server
       JAVA_OPTS: ${REST_JAVA_OPTS:--Xmx2000m}
 
@@ -157,7 +140,6 @@ services:
 
   # TPS is host-networked like Caddy: it has to proxy challenged requests back
   # into Caddy's internal listener, which only exists on the host's loopback.
-  # Binding loopback-only keeps it unreachable from outside the machine.
   tps:
     build:
       dockerfile: Dockerfile-tps
@@ -176,8 +158,7 @@ services:
       TOKEN_REQUEST_BUDGET: 1000
       TOKEN_IP_SWITCH_COST: 10
 
-      # Secrets have no defaults on purpose: the stack refuses to start until
-      # you create a .env defining them (see .env.example)
+      # Secrets are required. The stack refuses to start if they aren't set.
       TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:?copy .env.example to .env and set the TPS secrets}
       TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:?copy .env.example to .env and set the TPS secrets}
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:?copy .env.example to .env and set the TPS secrets}
