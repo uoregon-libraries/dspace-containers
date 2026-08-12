@@ -2,4 +2,10 @@ FROM docker.io/caddy:2-alpine
 
 RUN caddy add-package github.com/caddyserver/transform-encoder
 COPY ./conf/caddy /etc/caddy
+
+# /etc/caddy/conf.d is the drop-in mount point, backed by the caddy-conf named
+# volume. It MUST be empty in the image: podman seeds fresh named volumes from
+# image content (copy-up), and nothing baked in may ever land in that volume.
+RUN mkdir -p /etc/caddy/conf.d
+
 EXPOSE 80

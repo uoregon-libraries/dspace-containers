@@ -27,6 +27,10 @@ services:
       - tps
     volumes:
       - request-logs:/var/log/caddy
+      # One-off Caddy rules (*.site.caddyfile / *.server.caddyfile). Manage
+      # the files from the host side of the volume, then restart or reload
+      # the web service — see docs/caddy-drop-ins.md.
+      - caddy-conf:/etc/caddy/conf.d:ro
     network_mode: host
     environment:
       CADDY_HTTP_PORT: ${CADDY_HTTP_PORT:-8080}
@@ -179,3 +183,9 @@ volumes:
   db: {}
   solr: {}
   tps-data: {}
+
+  # Caddy drop-in rules. Redefine this long-form in a compose override to back
+  # it with a host directory (see compose.override.example.yml). NOTE: compose
+  # only applies driver_opts when the volume is first created; changing the
+  # device later requires removing the volume.
+  caddy-conf: {}

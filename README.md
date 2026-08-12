@@ -64,6 +64,11 @@ A `compose.override.yml` is optional and only needed for structural changes:
 angular's live-reload, volume overrides, etc. See
 `compose.override.example.yml`.
 
+One-off Caddy rules (emergency bot blocks and the like) don't require a
+rebuild: they're files dropped into the `caddy-conf` volume, applied with a
+restart or reload of the `web` service. See
+[docs/caddy-drop-ins.md](docs/caddy-drop-ins.md).
+
 ## Start it up!
 
 Finally, start up the stack and browse to `http://localhost:8080`
