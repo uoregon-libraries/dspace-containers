@@ -6,6 +6,10 @@
 /compose.override.yml
 /.env
 
+# Local host-dir backing for the caddy-conf volume (see
+# compose.override.example.yml)
+/DEV-VOLS
+
 /exports
 !/export/db/.keep
 

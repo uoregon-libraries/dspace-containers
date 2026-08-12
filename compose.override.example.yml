@@ -21,7 +21,34 @@ services:
   #    - node-modules:/app/node_modules
   #    - angular-cache:/app/.angular
 
-# Required for the dev angular volumes above
+# Required for the dev angular volumes above. Note that YAML allows only one
+# top-level `volumes:` key — if you also use the caddy-conf override below,
+# merge the two stanzas.
 #volumes:
 #  node-modules: {}
 #  angular-cache: {}
+
+# Back the Caddy drop-in volume with a host directory so one-off rules can be
+# managed as plain files (see docs/caddy-drop-ins.md). The directory MUST
+# exist before `up`. Compose only reads driver_opts when it *creates* the
+# volume: to change `device` later, stop the stack and remove the volume
+# (e.g., `podman volume rm <project>_caddy-conf`) so it gets recreated. The
+# rule files themselves are safe either way — they live in the host dir.
+#
+# Production:
+#volumes:
+#  caddy-conf:
+#    driver: local
+#    driver_opts:
+#      type: none
+#      o: bind
+#      device: /var/local/dspace/caddy-conf.d
+#
+# Development (keep it inside the project checkout):
+#volumes:
+#  caddy-conf:
+#    driver: local
+#    driver_opts:
+#      type: none
+#      o: bind
+#      device: ${PWD}/DEV-VOLS/caddy-conf.d

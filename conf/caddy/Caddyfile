@@ -35,15 +35,24 @@
 	}
 }
 
-# Optional extra top-level listeners: TPS relies on an internal, challenge-free
+# Baked-in extra top-level listeners: TPS relies on an internal, challenge-free
 # listener to be defined
+import /etc/caddy/core.d/*.server.caddyfile
+
+# One-off listeners dropped into the caddy-conf volume; normally empty. See
+# docs/caddy-drop-ins.md.
 import /etc/caddy/conf.d/*.server.caddyfile
 
 # Public listener: all requests start here. The port is the *host* port, since
 # Caddy runs with host networking.
 :{$CADDY_HTTP_PORT} {
-	# Custom site-level rules (e.g., TPS)
+	# One-off site rules from the caddy-conf volume (see
+	# docs/caddy-drop-ins.md), imported *before* core rules so an emergency
+	# drop-in `handle` can preempt bot protection
 	import /etc/caddy/conf.d/*.site.caddyfile
+
+	# Baked-in site rules (e.g., TPS)
+	import /etc/caddy/core.d/*.site.caddyfile
 
 	# All routing rules are externally imported so that when bot protection is
 	# set up, the routes are the same for the main listener or the internal
