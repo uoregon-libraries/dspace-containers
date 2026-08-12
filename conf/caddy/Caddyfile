@@ -11,11 +11,11 @@
 			time_format "02/Jan/2006:15:04:05 -0700"
 		}
 		output file /var/log/caddy/request.log {
-			# Don't rotate logs until they're big enough to need it, and keep 30 days
-			# worth, not a set number of files
+			# Don't rotate logs until they're big enough to need it, and keep
+			# CADDY_LOG_RETENTION worth (default 30 days), not a set number of files
 			roll_size 1GiB
 			roll_keep 0
-			roll_keep_for 720h
+			roll_keep_for {$CADDY_LOG_RETENTION:720h}
 		}
 	}
 
@@ -26,11 +26,11 @@
 			time_format rfc3339_nano
 		}
 		output file /var/log/caddy/request.json {
-			# Don't rotate logs until they're big enough to need it, and keep 30 days
-			# worth, not a set number of files
+			# Don't rotate logs until they're big enough to need it, and keep
+			# CADDY_LOG_RETENTION worth (default 30 days), not a set number of files
 			roll_size 1GiB
 			roll_keep 0
-			roll_keep_for 720h
+			roll_keep_for {$CADDY_LOG_RETENTION:720h}
 		}
 	}
 }
