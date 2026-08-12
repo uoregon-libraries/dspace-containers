@@ -38,6 +38,13 @@ services:
       CADDY_ANGULAR_UPSTREAM: 127.0.0.1:${ANGULAR_HOST_PORT:-4000}
       CADDY_REST_UPSTREAM: 127.0.0.1:${REST_HOST_PORT:-8081}
       CADDY_TPS_UPSTREAM: 127.0.0.1:${TPS_HOST_PORT:-18888}
+      CADDY_LOG_RETENTION: ${CADDY_LOG_RETENTION:-720h}
+      # The dev-friendly Host defaults live in .env.example, not here:
+      # podman-compose's interpolation can't put brace text (Caddy runtime
+      # placeholders) inside a ${VAR:-default}
+      CADDY_REST_HOST_HEADER: ${CADDY_REST_HOST_HEADER:-localhost:8080}
+      CADDY_ANGULAR_HOST_HEADER: ${CADDY_ANGULAR_HOST_HEADER:-localhost:4000}
+      CADDY_FORWARDED_PROTO: ${PUBLIC_SCHEME:-http}
 
   angular:
     build:
