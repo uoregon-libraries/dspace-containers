@@ -2,7 +2,7 @@
 /dspace-rest
 /dspace-angular
 
-# Ignore compose overrides and per-checkout settings
+# Ignore per-env compose config
 /compose.override.yml
 /.env
 
