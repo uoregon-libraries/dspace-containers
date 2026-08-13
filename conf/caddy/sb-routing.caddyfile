@@ -1,13 +1,6 @@
 # Routing for both the public listener and the TPS post-challenge internal
-# listener. Upstreams and headers come from the environment (see compose.yml
-# and .env.example):
-#
-#   - CADDY_REST_HOST_HEADER / CADDY_ANGULAR_HOST_HEADER: the Host header sent
-#     upstream. Dev passes the client's Host through to REST (the
-#     {http.request.hostport} runtime placeholder) and pins Angular to the SSR
-#     server's own address; production pins both to the public hostname.
-#   - CADDY_FORWARDED_PROTO: derived from PUBLIC_SCHEME. Production terminates
-#     TLS upstream of Caddy, so Caddy must assert https explicitly.
+# listener. Make sure your env vars are set up correctly for your environment,
+# as the host/proto headers *must* be correct for DSpace to work!
 
 reverse_proxy /server/* {$CADDY_REST_UPSTREAM} {
 	header_up Host {$CADDY_REST_HOST_HEADER:localhost:8080}
