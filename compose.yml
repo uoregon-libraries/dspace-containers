@@ -3,9 +3,9 @@
 #
 # - DO NOT use an override for *any* environment vars or you risk settings
 #   drift, which can bite you in awful ways.
-# - DO NOT alter ports in a compose override, use settings. We bind nearly
-#   everything to loopback. It's necessary for Caddy to expose the ports, but
-#   *critical* for security to keep them bound to the loopback interface.
+# - DO NOT alter ports in a compose override, use settings. Caddy's public
+#   listener is the stack's only published port, loopback-only by default;
+#   everything else stays on the internal bridge network.
 
 networks:
   dspacenet:
@@ -14,10 +14,11 @@ networks:
         - subnet: ${DSPACE_SUBNET:-172.23.78.0/24}
 
 services:
-  # Caddy *runs on the host network* in order to see actual client IPs. It
-  # sucks, we risk collisions, but it's necessary: we need to know IPs to let
-  # site monitors bypass TPS, allow load testing to bypass TPS, log correctly
-  # in case of abuse, etc.
+  # Caddy fronts the whole stack from the bridge network. An external proxy
+  # (e.g., HAProxy) forwards traffic to its one published port and passes the
+  # real client IP in X-Forwarded-For; Caddy resolves client IPs from that
+  # header (see CADDY_TRUSTED_PROXIES), since rootless podman's port forwarder
+  # rewrites socket-level source addresses on published ports.
   web:
     build:
       dockerfile: Dockerfile-caddy
@@ -28,17 +29,19 @@ services:
     volumes:
       - request-logs:/var/log/caddy
       - caddy-conf:/etc/caddy/conf.d:ro
-    network_mode: host
+    networks:
+      dspacenet: {}
+    ports:
+      - "${CADDY_BIND_ADDR:-127.0.0.1}:${CADDY_HTTP_PORT:-8080}:80"
     environment:
-      CADDY_HTTP_PORT: ${CADDY_HTTP_PORT:-8080}
       CADDY_TRUSTED_PROXIES: ${CADDY_TRUSTED_PROXIES:-static private_ranges}
       CADDY_DEBUG: ${CADDY_DEBUG:-}
-      CADDY_ADMIN_CIDR: ${CADDY_ADMIN_CIDR:-127.0.0.1}
-      CADDY_INTERNAL_MONITOR_CIDR: ${CADDY_INTERNAL_MONITOR_CIDR:-127.0.0.1}
+      CADDY_ADMIN_CIDR: ${CADDY_ADMIN_CIDR:-private_ranges}
+      CADDY_INTERNAL_MONITOR_CIDR: ${CADDY_INTERNAL_MONITOR_CIDR:-private_ranges}
       CADDY_INTERNAL_PORT: ${CADDY_INTERNAL_PORT:-18081}
-      CADDY_ANGULAR_UPSTREAM: 127.0.0.1:${ANGULAR_HOST_PORT:-4000}
-      CADDY_REST_UPSTREAM: 127.0.0.1:${REST_HOST_PORT:-8081}
-      CADDY_TPS_UPSTREAM: 127.0.0.1:${TPS_HOST_PORT:-18888}
+      CADDY_ANGULAR_UPSTREAM: angular:4000
+      CADDY_REST_UPSTREAM: rest:8080
+      CADDY_TPS_UPSTREAM: tps:8080
       CADDY_LOG_RETENTION: ${CADDY_LOG_RETENTION:-720h}
       CADDY_REST_HOST_HEADER: ${CADDY_REST_HOST_HEADER:-localhost:8080}
       CADDY_ANGULAR_HOST_HEADER: ${CADDY_ANGULAR_HOST_HEADER:-localhost:4000}
@@ -50,8 +53,6 @@ services:
       target: production
     depends_on:
       - rest
-    ports:
-      - "127.0.0.1:${ANGULAR_HOST_PORT:-4000}:4000"
 
     # Overrides for DSpace UI must start with "DSPACE_", replacing dots with
     # underscores, and arrays are addressed by giving an index number. The
@@ -92,8 +93,6 @@ services:
       dockerfile: Dockerfile-rest
       args:
         MAVEN_FLAGS: ${MAVEN_FLAGS:-}
-    ports:
-      - "127.0.0.1:${REST_HOST_PORT:-8081}:8080"
 
     # The env key syntax may look odd, but it is how to override dspace.cfg
     # settings via env variables.
@@ -140,12 +139,14 @@ services:
       - solr:/var/solr
     command: ["solr", "-f"]
 
-  # TPS is host-networked like Caddy: it has to proxy challenged requests back
-  # into Caddy's internal listener, which only exists on the host's loopback.
+  # TPS proxies challenged requests back into Caddy's internal listener over
+  # the bridge network. Nothing here is published to the host: only Caddy
+  # talks to TPS, and only TPS needs Caddy's internal listener.
   tps:
     build:
       dockerfile: Dockerfile-tps
-    network_mode: host
+    networks:
+      dspacenet: {}
     depends_on:
       angular:
         condition: service_started
@@ -153,8 +154,8 @@ services:
         condition: service_started
     environment:
       GIN_MODE: "release"
-      BIND_ADDR: 127.0.0.1:${TPS_HOST_PORT:-18888}
-      PROXY_TARGET: http://127.0.0.1:${CADDY_INTERNAL_PORT:-18081}
+      BIND_ADDR: ":8080"
+      PROXY_TARGET: http://web:${CADDY_INTERNAL_PORT:-18081}
       LOG_RETENTION: "24h"
       TOKEN_LIFETIME: 4h
       TOKEN_REQUEST_BUDGET: 1000
