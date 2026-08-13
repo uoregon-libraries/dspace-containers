@@ -27,9 +27,6 @@ services:
       - tps
     volumes:
       - request-logs:/var/log/caddy
-      # One-off Caddy rules (*.site.caddyfile / *.server.caddyfile). Manage
-      # the files from the host side of the volume, then restart or reload
-      # the web service — see docs/caddy-drop-ins.md.
       - caddy-conf:/etc/caddy/conf.d:ro
     network_mode: host
     environment:
@@ -43,9 +40,6 @@ services:
       CADDY_REST_UPSTREAM: 127.0.0.1:${REST_HOST_PORT:-8081}
       CADDY_TPS_UPSTREAM: 127.0.0.1:${TPS_HOST_PORT:-18888}
       CADDY_LOG_RETENTION: ${CADDY_LOG_RETENTION:-720h}
-      # The dev-friendly Host defaults live in .env.example, not here:
-      # podman-compose's interpolation can't put brace text (Caddy runtime
-      # placeholders) inside a ${VAR:-default}
       CADDY_REST_HOST_HEADER: ${CADDY_REST_HOST_HEADER:-localhost:8080}
       CADDY_ANGULAR_HOST_HEADER: ${CADDY_ANGULAR_HOST_HEADER:-localhost:4000}
       CADDY_FORWARDED_PROTO: ${PUBLIC_SCHEME:-http}
@@ -53,9 +47,6 @@ services:
   angular:
     build:
       dockerfile: Dockerfile-angular
-      # The default is the compiled production (SSR) server. For development
-      # with the live-reload dev server, override the target to "dev" in your
-      # compose override (see compose.override.example.yml).
       target: production
     depends_on:
       - rest
@@ -183,9 +174,4 @@ volumes:
   db: {}
   solr: {}
   tps-data: {}
-
-  # Caddy drop-in rules. Redefine this long-form in a compose override to back
-  # it with a host directory (see compose.override.example.yml). NOTE: compose
-  # only applies driver_opts when the volume is first created; changing the
-  # device later requires removing the volume.
   caddy-conf: {}
