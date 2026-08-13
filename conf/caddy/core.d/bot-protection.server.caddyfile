@@ -1,10 +1,9 @@
 # This snippet enables the post-challenge listener for TPS
 
-# Caddy runs on the host network, so this listener binds loopback only,
-# otherwise bots could hit it directly and bypass your protections.
-:{$CADDY_INTERNAL_PORT} {
-	bind 127.0.0.1
-
+# Only containers on the bridge network can reach this listener. NEVER
+# publish this port to the host, or bots could hit it directly and bypass
+# your protections.
+:{$CADDY_INTERNAL_PORT:18081} {
 	import /etc/caddy/sb-routing.caddyfile
 
 	log http-internal-access {

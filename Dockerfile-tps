@@ -23,7 +23,7 @@ COPY --from=build /template-maker/tps-templates/failed.go.html /var/local/tps/te
 # Env values we don't need to let the user configure
 ENV GIN_MODE=release
 ENV BIND_ADDR=:8080
-ENV PROXY_TARGET=http://web:8081
+ENV PROXY_TARGET=http://web:18081
 
 ENTRYPOINT ["/usr/local/tps/tps"]
 CMD ["serve"]
