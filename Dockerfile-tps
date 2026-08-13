@@ -24,7 +24,7 @@ COPY --from=build /template-maker/tps-templates/failed.go.html /var/local/tps/te
 ENV GIN_MODE=release
 ENV BIND_ADDR=:8080
 ENV PROXY_TARGET=http://web:18081
-ENV LOG_DB_PATH=/var/local/tps/data
+ENV LOG_DB_PATH=/var/local/tps/data/tps.db
 
 ENTRYPOINT ["/usr/local/tps/tps"]
 CMD ["serve"]
