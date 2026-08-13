@@ -1,7 +1,14 @@
-# A compose override is optional. Config is generally done in `.env`, so this
-# is basically for structural setup.
+# A minimal compose override is needed to expose Caddy. All config is done in
+# `.env`, so this is for structural settings only. If you absolutely need to
+# override an unexposed environment variable, please *fix* the compose spec /
+# image definitions / etc. Don't just muddy up your override.
 
 services:
+  web:
+    # Expose caddy to your host - this is required
+    ports:
+      - 0.0.0.0:8080:80
+
   # Only use this if you have a DB dump you want to import
   db:
     volumes:
