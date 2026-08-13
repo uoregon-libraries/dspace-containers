@@ -4,7 +4,7 @@ RUN apk update && apk upgrade
 RUN apk add make git
 
 WORKDIR /usr/local/src/turnstile-proxy
-RUN git clone https://github.com/uoregon-libraries/turnstile-proxy-server.git -b v3.0.0-rc1 .
+RUN git clone https://github.com/uoregon-libraries/turnstile-proxy-server.git -b v3.0.0 .
 RUN make
 
 WORKDIR /template-maker
@@ -24,6 +24,7 @@ COPY --from=build /template-maker/tps-templates/failed.go.html /var/local/tps/te
 ENV GIN_MODE=release
 ENV BIND_ADDR=:8080
 ENV PROXY_TARGET=http://web:18081
+ENV LOG_DB_PATH=/var/local/tps/data
 
 ENTRYPOINT ["/usr/local/tps/tps"]
 CMD ["serve"]
