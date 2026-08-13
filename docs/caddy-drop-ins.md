@@ -17,12 +17,8 @@ The `web` container mounts the `caddy-conf` named volume (read-only) at
 - `*.server.caddyfile` — imported at the **top level** of the Caddyfile, for
   whole new listeners / site blocks.
 
-Core rules (the TPS bot-protection snippets) are baked into the image at
-`/etc/caddy/core.d` and can never be affected by volume operations. The
-image's `/etc/caddy/conf.d` is intentionally empty — podman seeds a new named
-volume from the image's directory content (copy-up), and keeping the mount
-point empty guarantees that deleting the `caddy-conf` volume only ever
-removes custom one-off rules, never core config.
+Core rules (e.g., bot protection) are baked into the image to avoid accidental
+breaking when customizing one-offs.
 
 ## Adding or changing a rule
 
@@ -30,21 +26,20 @@ Production should back the volume with a host directory (see
 `compose.override.example.yml`), so rules are just files:
 
 ```bash
+# Create / edit a rule
 $EDITOR /var/local/dspace/caddy-conf.d/00-my-rule.site.caddyfile
-podman compose restart web
-```
 
-Or, for a zero-downtime apply (validate first!):
-
-```bash
+# Make sure Caddy config validates, then restart it
 podman compose exec web caddy validate --config /etc/caddy/Caddyfile
+podman compose restart web
+
+# Or do a zero-downtime reload
 podman compose exec web caddy reload --config /etc/caddy/Caddyfile
 ```
 
-Removing a rule is deleting the file plus the same restart/reload.
-
 If you *don't* have a host-directory override (e.g., dev with the plain named
-volume), you can still get at the files rootless:
+volume), you can still get at the files rootless via `podman unshare` (this
+command is new to me, so look it up if you need to use it!)
 
 ```bash
 podman volume inspect <project>_caddy-conf --format '{{.Mountpoint}}'
@@ -61,30 +56,28 @@ A real rule set production has used, as a template
 @blocked client_ip 114.119.141.0/24 114.119.153.0/24
 abort @blocked
 
-# Bad bots: we probably want a single rule for these but I need to do some
-# research. For now, one rule per bot. These rules must *never* be applied to
-# well-behaved bots. The bad bots are those that aren't respecting our sitemap
-# **and** are grabbing things with no throttling.
-@badbot001 {
+# Bad bot! No biscuit! This app seems to get abused by well-intentioned people
+# who just aren't aware how expensive it is on servers.
+@badbot {
 	header_regexp User-Agent (?i)github\.com/rom1504/img2dataset
 }
-@badbot002 {
-	header_regexp User-Agent (?i)PetalBot
-}
-abort @badbot001
-abort @badbot002
+abort @badbot
 ```
 
 ## Caveats
 
-- Compose reads a volume's `driver_opts` only when it **creates** the volume.
-  To change the `device` path later: stop the stack, `podman volume rm
-  <project>_caddy-conf`, and bring it back up. Files in a host-backed
-  directory are untouched by this — only the volume object is removed.
-- The host directory must exist before `podman compose up`, or volume
-  creation fails.
-- On a *plain* named volume (no host-dir override), `podman volume rm` or
-  `down -v` deletes your drop-in files. Core rules are never at risk — they
-  live in the image.
-- Drop-in files are visible read-only inside the container; edit them from
-  the host side.
+Compose only uses a volume's `driver_opts` on creation. This can result in
+unexpected behavior unless you're very well-versed in the crazy world of
+containers and volumes.
+
+- The "device" path cannot be changed just by editing it: you have to remove
+  the volume and recreate it
+- The "device" path must exist before you start the stack
+- When you remove a volume, you're destroying what podman "owns": if it's a
+  named volume with no options, podman owns the volume and its contents; if
+  it's just a list of options with a host directory in `driver_opts`, podman
+  only owns the definition, not the directory and not its contents.
+
+Note that drop-in files are visible read-only inside the container. Edit them
+from the host side or else create a one-off container for editing. Never change
+the volume to read-write: Caddy should not be allowed to edit its own config.
