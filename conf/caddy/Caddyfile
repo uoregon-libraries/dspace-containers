@@ -7,8 +7,6 @@
 	log requests-common-log {
 		level INFO
 		include http.log.access.requests
-		# client_ip, not remote_ip: the socket peer is always podman's forwarder
-		# or the external proxy; the real visitor comes from X-Forwarded-For
 		format transform `{request>client_ip} - {user_id} [{ts}] "{request>method} {request>uri} {request>proto}" {status} {size} "{request>headers>Referer>[0]}" "{request>headers>User-Agent>[0]}"` {
 			time_format "02/Jan/2006:15:04:05 -0700"
 		}
@@ -45,10 +43,7 @@ import /etc/caddy/core.d/*.server.caddyfile
 # docs/caddy-drop-ins.md.
 import /etc/caddy/conf.d/*.server.caddyfile
 
-# Public listener: all requests start here. Port 80 is container-internal;
-# compose publishes it to the host (loopback-only by default) as
-# CADDY_HTTP_PORT, which is where the external proxy — or a dev browser —
-# connects.
+# Public listener: all requests start here
 :80 {
 	# One-off site rules from the caddy-conf volume (see
 	# docs/caddy-drop-ins.md), imported *before* core rules so an emergency

@@ -3,22 +3,14 @@
 #
 # - DO NOT use an override for *any* environment vars or you risk settings
 #   drift, which can bite you in awful ways.
-# - DO NOT alter ports in a compose override, use settings. Caddy's public
-#   listener is the stack's only published port, loopback-only by default;
-#   everything else stays on the internal bridge network.
 
 networks:
   dspacenet:
     ipam:
       config:
-        - subnet: ${DSPACE_SUBNET:-172.23.78.0/24}
+        - subnet: ${DSPACE_SUBNET:?DSPACE_SUBNET must be set}
 
 services:
-  # Caddy fronts the whole stack from the bridge network. An external proxy
-  # (e.g., HAProxy) forwards traffic to its one published port and passes the
-  # real client IP in X-Forwarded-For; Caddy resolves client IPs from that
-  # header (see CADDY_TRUSTED_PROXIES), since rootless podman's port forwarder
-  # rewrites socket-level source addresses on published ports.
   web:
     build:
       dockerfile: Dockerfile-caddy
@@ -31,21 +23,15 @@ services:
       - caddy-conf:/etc/caddy/conf.d:ro
     networks:
       dspacenet: {}
-    ports:
-      - "${CADDY_BIND_ADDR:-127.0.0.1}:${CADDY_HTTP_PORT:-8080}:80"
     environment:
-      CADDY_TRUSTED_PROXIES: ${CADDY_TRUSTED_PROXIES:-static private_ranges}
+      CADDY_TRUSTED_PROXIES: ${CADDY_TRUSTED_PROXIES:?CADDY_TRUSTED_PROXIES must be set}
       CADDY_DEBUG: ${CADDY_DEBUG:-}
-      CADDY_ADMIN_CIDR: ${CADDY_ADMIN_CIDR:-private_ranges}
-      CADDY_INTERNAL_MONITOR_CIDR: ${CADDY_INTERNAL_MONITOR_CIDR:-private_ranges}
-      CADDY_INTERNAL_PORT: ${CADDY_INTERNAL_PORT:-18081}
-      CADDY_ANGULAR_UPSTREAM: angular:4000
-      CADDY_REST_UPSTREAM: rest:8080
-      CADDY_TPS_UPSTREAM: tps:8080
-      CADDY_LOG_RETENTION: ${CADDY_LOG_RETENTION:-720h}
-      CADDY_REST_HOST_HEADER: ${CADDY_REST_HOST_HEADER:-localhost:8080}
-      CADDY_ANGULAR_HOST_HEADER: ${CADDY_ANGULAR_HOST_HEADER:-localhost:4000}
-      CADDY_FORWARDED_PROTO: ${PUBLIC_SCHEME:-http}
+      CADDY_ADMIN_CIDR: ${CADDY_ADMIN_CIDR:?CADDY_ADMIN_CIDR must be set}
+      CADDY_INTERNAL_MONITOR_CIDR: ${CADDY_INTERNAL_MONITOR_CIDR:?CADDY_INTERNAL_MONITOR_CIDR must be set}
+      CADDY_LOG_RETENTION: ${CADDY_LOG_RETENTION:-48h}
+      CADDY_REST_HOST_HEADER: ${CADDY_REST_HOST_HEADER:?CADDY_REST_HOST_HEADER must be set}
+      CADDY_ANGULAR_HOST_HEADER: ${CADDY_ANGULAR_HOST_HEADER:?CADDY_ANGULAR_HOST_HEADER must be set}
+      CADDY_FORWARDED_PROTO: ${PUBLIC_SCHEME:?PUBLIC_SCHEME must be set}
 
   angular:
     build:
@@ -81,9 +67,9 @@ services:
 
       # The *public* REST URL, from the PUBLIC_* variables in .env. Do not
       # change the namespace: Caddy's routing depends on it.
-      DSPACE_REST_SSL: "${PUBLIC_SSL:-false}"
-      DSPACE_REST_HOST: ${PUBLIC_HOST:-localhost}
-      DSPACE_REST_PORT: ${PUBLIC_PORT:-8080}
+      DSPACE_REST_SSL: ${PUBLIC_SSL:?PUBLIC_SSL must be set}
+      DSPACE_REST_HOST: ${PUBLIC_HOST:?PUBLIC_HOST must be set}
+      DSPACE_REST_PORT: ${PUBLIC_PORT:?PUBLIC_PORT must be set}
       DSPACE_REST_NAMESPACE: /server
     networks:
       dspacenet: {}
@@ -103,12 +89,12 @@ services:
     # See https://github.com/DSpace/DSpace/blob/main/dspace/config/config-definition.xml
     environment:
       LOGGING_CONFIG: /usr/local/dspace/config/log4j2-container.xml
-      dspace__P__name: ${DSPACE_NAME:-DSpace Started with Docker Compose}
-      dspace__P__server__P__url: ${PUBLIC_URL:-http://localhost:8080}/server
-      dspace__P__ui__P__url: ${PUBLIC_URL:-http://localhost:8080}
-      proxies__P__trusted__P__ipranges: ${DSPACE_SUBNET:-172.23.78.0/24}
+      dspace__P__name: ${DSPACE_NAME:?DSPACE_NAME must be set}
+      dspace__P__server__P__url: ${PUBLIC_URL:?PUBLIC_URL must be set}/server
+      dspace__P__ui__P__url: ${PUBLIC_URL:?PUBLIC_URL must be set}
+      proxies__P__trusted__P__ipranges: ${DSPACE_SUBNET:?DSPACE_SUBNET must be set}
       dspace__P__server__P__ssr__P__url: http://rest:8080/server
-      JAVA_OPTS: ${REST_JAVA_OPTS:--Xmx2000m}
+      JAVA_OPTS: ${REST_JAVA_OPTS:-}
 
     depends_on:
       - db
@@ -139,9 +125,6 @@ services:
       - solr:/var/solr
     command: ["solr", "-f"]
 
-  # TPS proxies challenged requests back into Caddy's internal listener over
-  # the bridge network. Nothing here is published to the host: only Caddy
-  # talks to TPS, and only TPS needs Caddy's internal listener.
   tps:
     build:
       dockerfile: Dockerfile-tps
@@ -155,7 +138,7 @@ services:
     environment:
       GIN_MODE: "release"
       BIND_ADDR: ":8080"
-      PROXY_TARGET: http://web:${CADDY_INTERNAL_PORT:-18081}
+      PROXY_TARGET: http://web:18081
       LOG_RETENTION: "24h"
       TOKEN_LIFETIME: 4h
       TOKEN_REQUEST_BUDGET: 1000
