@@ -2,8 +2,12 @@
 /dspace-rest
 /dspace-angular
 
-# Ignore compose overrides
+# Ignore per-env compose config
 /compose.override.yml
+/.env
+
+# Dev volume overrides (caddy conf.d for now)
+/DEV-VOLS
 
 /exports
 !/export/db/.keep

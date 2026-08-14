@@ -1,4 +1,9 @@
 FROM docker.io/caddy:2-alpine
 
+RUN caddy add-package github.com/caddyserver/transform-encoder
 COPY ./conf/caddy /etc/caddy
+
+# Create the empty dir for our drop-in volume
+RUN mkdir -p /etc/caddy/conf.d
+
 EXPOSE 80

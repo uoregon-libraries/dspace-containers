@@ -1,4 +1,13 @@
-reverse_proxy /server/* rest:8080
+# Routing for both the public listener and the TPS post-challenge internal
+# listener. Make sure your env vars are set up correctly for your environment,
+# as the host/proto headers *must* be correct for DSpace to work!
+
+reverse_proxy /server/* rest:8080 {
+	header_up Host {$CADDY_REST_HOST_HEADER:localhost:8080}
+	header_up X-Forwarded-Proto {$CADDY_FORWARDED_PROTO:http}
+}
+
 reverse_proxy /* angular:4000 {
-	header_up Host localhost:4000
+	header_up Host {$CADDY_ANGULAR_HOST_HEADER:localhost:4000}
+	header_up X-Forwarded-Proto {$CADDY_FORWARDED_PROTO:http}
 }

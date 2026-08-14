@@ -3,23 +3,60 @@
 	servers {
 		trusted_proxies {$CADDY_TRUSTED_PROXIES:static private_ranges}
 	}
+
+	log requests-common-log {
+		level INFO
+		include http.log.access.requests
+		format transform `{request>client_ip} - {user_id} [{ts}] "{request>method} {request>uri} {request>proto}" {status} {size} "{request>headers>Referer>[0]}" "{request>headers>User-Agent>[0]}"` {
+			time_format "02/Jan/2006:15:04:05 -0700"
+		}
+		output file /var/log/caddy/request.log {
+			# Don't rotate logs until they're big enough to need it, and keep
+			# CADDY_LOG_RETENTION worth (default 30 days), not a set number of files
+			roll_size 1GiB
+			roll_keep 0
+			roll_keep_for {$CADDY_LOG_RETENTION:720h}
+		}
+	}
+
+	log requests-json {
+		level INFO
+		include http.log.access.requests
+		format json {
+			time_format rfc3339_nano
+		}
+		output file /var/log/caddy/request.json {
+			# Don't rotate logs until they're big enough to need it, and keep
+			# CADDY_LOG_RETENTION worth (default 30 days), not a set number of files
+			roll_size 1GiB
+			roll_keep 0
+			roll_keep_for {$CADDY_LOG_RETENTION:720h}
+		}
+	}
 }
 
-# Optional extra top-level listeners: TPS relies on an internal, challenge-free
+# Baked-in extra top-level listeners: TPS relies on an internal, challenge-free
 # listener to be defined
+import /etc/caddy/core.d/*.server.caddyfile
+
+# One-off listeners dropped into the caddy-conf volume; normally empty. See
+# docs/caddy-drop-ins.md.
 import /etc/caddy/conf.d/*.server.caddyfile
 
 # Public listener: all requests start here
 :80 {
-	# Custom site-level rules (e.g., TPS)
+	# One-off site rules from the caddy-conf volume (see
+	# docs/caddy-drop-ins.md), imported *before* core rules so an emergency
+	# drop-in `handle` can preempt bot protection
 	import /etc/caddy/conf.d/*.site.caddyfile
+
+	# Baked-in site rules (e.g., TPS)
+	import /etc/caddy/core.d/*.site.caddyfile
 
 	# All routing rules are externally imported so that when bot protection is
 	# set up, the routes are the same for the main listener or the internal
 	# "challenge succeeded" listener.
 	import /etc/caddy/sb-routing.caddyfile
 
-	log http-public-access {
-		level INFO
-	}
+	log requests
 }

@@ -1,0 +1,13 @@
+# This snippet enables the post-challenge listener for TPS
+
+# Only containers on the bridge network can reach this listener. NEVER
+# publish this port to the host, or bots could hit it directly and bypass
+# your protections.
+:18081 {
+	import /etc/caddy/sb-routing.caddyfile
+
+	log http-internal-access {
+		level INFO
+	}
+}
+

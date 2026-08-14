@@ -1,8 +1,14 @@
-# We define a custom subnet so we know what network to allow DSpace to trust.
-# Its netmask and the service IPs *must be set in the compose override*
-# otherwise DSpace cannot function!
+# Configuration lives in `.env` and is interpolated here to avoid var
+# duplication and keep all per-environment configuration central.
+#
+# - DO NOT use an override for *any* environment vars or you risk settings
+#   drift, which can bite you in awful ways.
+
 networks:
-  dspacenet: {}
+  dspacenet:
+    ipam:
+      config:
+        - subnet: ${DSPACE_SUBNET:?DSPACE_SUBNET must be set}
 
 services:
   web:
@@ -12,15 +18,24 @@ services:
       - angular
       - rest
       - tps
+    volumes:
+      - request-logs:/var/log/caddy
+      - caddy-conf:/etc/caddy/conf.d:ro
     networks:
       dspacenet: {}
+    environment:
+      CADDY_TRUSTED_PROXIES: ${CADDY_TRUSTED_PROXIES:?CADDY_TRUSTED_PROXIES must be set}
+      CADDY_DEBUG: ${CADDY_DEBUG:-}
+      CADDY_ADMIN_CIDR: ${CADDY_ADMIN_CIDR:?CADDY_ADMIN_CIDR must be set}
+      CADDY_INTERNAL_MONITOR_CIDR: ${CADDY_INTERNAL_MONITOR_CIDR:?CADDY_INTERNAL_MONITOR_CIDR must be set}
+      CADDY_LOG_RETENTION: ${CADDY_LOG_RETENTION:-48h}
+      CADDY_REST_HOST_HEADER: ${CADDY_REST_HOST_HEADER:?CADDY_REST_HOST_HEADER must be set}
+      CADDY_ANGULAR_HOST_HEADER: ${CADDY_ANGULAR_HOST_HEADER:?CADDY_ANGULAR_HOST_HEADER must be set}
+      CADDY_FORWARDED_PROTO: ${PUBLIC_SCHEME:?PUBLIC_SCHEME must be set}
 
   angular:
     build:
       dockerfile: Dockerfile-angular
-      # The default is the compiled production (SSR) server. For development
-      # with the live-reload dev server, override the target to "dev" in your
-      # compose override (see compose.override.example.yml).
       target: production
     depends_on:
       - rest
@@ -43,16 +58,18 @@ services:
       DSPACE_UI_PORT: 4000
       DSPACE_UI_NAMESPACE: /
 
+      # How many SSR worker processes pm2 runs
+      PM2_INSTANCES: ${PM2_INSTANCES:-max}
+
       # Server-side rendering talks to REST directly over the internal
       # network instead of going out through the public URL
       DSPACE_REST_SSRBASEURL: http://rest:8080/server
 
-      # The *public* REST URL. These defaults work for a local stack exposed
-      # on port 8080; real deployments must override them (see
-      # compose.override.example.yml).
-      DSPACE_REST_SSL: 'false'
-      DSPACE_REST_HOST: localhost
-      DSPACE_REST_PORT: 8080
+      # The *public* REST URL, from the PUBLIC_* variables in .env. Do not
+      # change the namespace: Caddy's routing depends on it.
+      DSPACE_REST_SSL: ${PUBLIC_SSL:?PUBLIC_SSL must be set}
+      DSPACE_REST_HOST: ${PUBLIC_HOST:?PUBLIC_HOST must be set}
+      DSPACE_REST_PORT: ${PUBLIC_PORT:?PUBLIC_PORT must be set}
       DSPACE_REST_NAMESPACE: /server
     networks:
       dspacenet: {}
@@ -60,6 +77,8 @@ services:
   rest:
     build:
       dockerfile: Dockerfile-rest
+      args:
+        MAVEN_FLAGS: ${MAVEN_FLAGS:-}
 
     # The env key syntax may look odd, but it is how to override dspace.cfg
     # settings via env variables.
@@ -69,15 +88,13 @@ services:
     #
     # See https://github.com/DSpace/DSpace/blob/main/dspace/config/config-definition.xml
     environment:
-      # You *could* override this if you know what you're doing. But you
-      # probably shouldn't.
       LOGGING_CONFIG: /usr/local/dspace/config/log4j2-container.xml
-
-      # You probably want to override these, or at least verify they make sense
-      # for your setup
-      dspace__P__name: 'DSpace Started with Docker Compose'
+      dspace__P__name: ${DSPACE_NAME:?DSPACE_NAME must be set}
+      dspace__P__server__P__url: ${PUBLIC_URL:?PUBLIC_URL must be set}/server
+      dspace__P__ui__P__url: ${PUBLIC_URL:?PUBLIC_URL must be set}
+      proxies__P__trusted__P__ipranges: ${DSPACE_SUBNET:?DSPACE_SUBNET must be set}
       dspace__P__server__P__ssr__P__url: http://rest:8080/server
-      JAVA_OPTS: -Xmx2000m
+      JAVA_OPTS: ${REST_JAVA_OPTS:-}
 
     depends_on:
       - db
@@ -111,6 +128,8 @@ services:
   tps:
     build:
       dockerfile: Dockerfile-tps
+    networks:
+      dspacenet: {}
     depends_on:
       angular:
         condition: service_started
@@ -118,16 +137,25 @@ services:
         condition: service_started
     environment:
       GIN_MODE: "release"
-      BIND_ADDR: ":18888"
-      PROXY_TARGET: "http://web:18081"
+      BIND_ADDR: ":8080"
+      PROXY_TARGET: http://web:18081
+      LOG_RETENTION: "24h"
       TOKEN_LIFETIME: 4h
       TOKEN_REQUEST_BUDGET: 1000
       TOKEN_IP_SWITCH_COST: 10
+
+      # Secrets are required. The stack refuses to start if they aren't set.
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:?copy .env.example to .env and set the TPS secrets}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:?copy .env.example to .env and set the TPS secrets}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:?copy .env.example to .env and set the TPS secrets}
+      ADMIN_SECRET: ${ADMIN_SECRET:?copy .env.example to .env and set the TPS secrets}
     volumes:
       - tps-data:/var/local/tps/data
 
 volumes:
+  request-logs: {}
   assetstore: {}
   db: {}
   solr: {}
   tps-data: {}
+  caddy-conf: {}

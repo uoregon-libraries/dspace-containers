@@ -1,15 +1,15 @@
 # Public: let challenged visitors hit the beacon
 handle /.tps/beacon {
-	reverse_proxy tps:18888
+	reverse_proxy tps:8080
 }
 
 # Restricted: only the VPN can reach report/watch (ADMIN_SECRET is still
 # required on top of this).
 @admin path /.tps/*
 handle @admin {
-	@notallowed not client_ip {$CADDY_ADMIN_IP_RANGE}
+	@notallowed not client_ip {$CADDY_ADMIN_CIDR}
 	respond @notallowed 404
-	reverse_proxy tps:18888
+	reverse_proxy tps:8080
 }
 
 # These are our only easily detected direct requests: everything angular
@@ -19,5 +19,5 @@ handle @admin {
 	not client_ip {$CADDY_INTERNAL_MONITOR_CIDR}
 }
 handle @protected {
-	reverse_proxy tps:18888
+	reverse_proxy tps:8080
 }
