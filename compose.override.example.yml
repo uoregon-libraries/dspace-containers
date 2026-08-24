@@ -14,6 +14,19 @@ services:
     volumes:
       - ./exports/db:/docker-entrypoint-initdb.d/
 
+  # Set SAML environment variables if using the SAML authentication module. There may be other
+  # necessary variables to set depending on the IDP, for which references can be found in 
+  # `dspace-rest/dspace/config/modules/saml-relying-party.cfg`.
+  # rest:
+  #   environment:
+  #     authentication__D__saml__P__relying__D__party__D__id: sso 
+  #     authentication__D__saml__P__autoregister: ${SAML_AUTOREGISTER:?false}
+  #     # These config option names depend on the relying party id defined above. 
+  #     # If changing the id, the variable names including the id (sso) must also be updated.
+  #     saml__D__relying__D__party__P__sso__P__asserting__D__party__P__metadata__D__uri: ${SAML_IDP_METADATA_URI:?SAML_IDP_METADATA_URI must be set}
+  #     saml__D__relying__D__party__P__sso__P__attributes: ${SAML_ATTRIBUTES:?SAML_ATTRIBUTES must be set}
+  #     rest__P__cors__P__allowed__D__origins: ${REST_ALLOWED_ORIGINS:?REST_ALLOWED_ORIGINS must be set} 
+
   # Development alternative: run the live-reload dev server instead of the
   # compiled production bundle. The bind mount lets you edit your
   # dspace-angular checkout on the host and see changes without rebuilding;
