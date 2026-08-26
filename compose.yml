@@ -39,6 +39,9 @@ services:
       target: production
     depends_on:
       - rest
+    volumes:
+      - statistics:/app/dist/server/assets/data
+      - statistics:/app/dist/browser/assets/data
 
     # Overrides for DSpace UI must start with "DSPACE_", replacing dots with
     # underscores, and arrays are addressed by giving an index number. The
@@ -103,6 +106,7 @@ services:
       dspacenet: {}
     volumes:
       - assetstore:/usr/local/dspace/assetstore
+      - statistics:/usr/local/dspace/statistics
 
   db:
     build:
@@ -159,3 +163,4 @@ volumes:
   solr: {}
   tps-data: {}
   caddy-conf: {}
+  statistics: {}
