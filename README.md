@@ -43,6 +43,7 @@ Next, you'll want to get an export and import it locally:
 1. Start the stack up again, and postgres will import the SQL fairly quickly
    (faster than the angular side boots up)
 1. Reindex: `docker compose exec rest /usr/local/dspace/bin/dspace index-discovery -b`
+1. Generate site-wide statistics files: `docker compose exec rest /usr/local/dspace/bin/update-stats`
 
 ## Create local admin
 
