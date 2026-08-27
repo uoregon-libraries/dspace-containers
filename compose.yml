@@ -40,7 +40,7 @@ services:
     depends_on:
       - rest
     volumes:
-      - statistics:/app/dist/browser/assets/data
+      - statistics:/app/dist/browser/assets/data:ro
 
     # Overrides for DSpace UI must start with "DSPACE_", replacing dots with
     # underscores, and arrays are addressed by giving an index number. The
