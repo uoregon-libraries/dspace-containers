@@ -1,7 +1,3 @@
-# Ignore the source projects if present
-/dspace-rest
-/dspace-angular
-
 # Ignore per-env compose config
 /compose.override.yml
 /.env

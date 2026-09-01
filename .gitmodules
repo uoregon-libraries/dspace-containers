@@ -1,0 +1,8 @@
+[submodule "dspace-angular"]
+	path = dspace-angular
+	url = ../scholarsbank-angular.git
+	branch = main
+[submodule "dspace-rest"]
+	path = dspace-rest
+	url = ../scholarsbank-rest.git
+	branch = main
