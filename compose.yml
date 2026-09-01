@@ -43,15 +43,13 @@ services:
       - statistics:/app/dist/browser/assets/data:ro
 
     # Overrides for DSpace UI must start with "DSPACE_", replacing dots with
-    # underscores, and arrays are addressed by giving an index number. The
-    # HEADTAGS are here for reference, but they aren't actually being respected
-    # for some reason.
+    # underscores, and arrays are addressed by giving an index number.
     environment:
       DSPACE_THEMES_0_NAME: custom
-      DSPACE_THEMES_0_HEADTAGS_0_TAGNAME: link
-      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_REL: icon
-      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_HREF: /path/to/favicon-32x32.png
-      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_SIZES: any
+      DSPACE_THEMES_0_HEADTAGS_1_TAGNAME: link
+      DSPACE_THEMES_0_HEADTAGS_1_ATTRIBUTES_REL: icon
+      DSPACE_THEMES_0_HEADTAGS_1_ATTRIBUTES_HREF: assets/custom/images/favicons/favicon-32x32.png
+      DSPACE_THEMES_0_HEADTAGS_1_ATTRIBUTES_SIZES: any
 
       # Where the UI server listens inside the container; the web proxy
       # forwards requests here
@@ -73,6 +71,15 @@ services:
       DSPACE_REST_HOST: ${PUBLIC_HOST:?PUBLIC_HOST must be set}
       DSPACE_REST_PORT: ${PUBLIC_PORT:?PUBLIC_PORT must be set}
       DSPACE_REST_NAMESPACE: /server
+
+      # The amount of time in ms before the idle warning is shown
+      DSPACE_AUTH_UI_TIMEUNTILIDLE: ${TIME_UNTIL_IDLE:-1800000}
+
+      # Show the item access status label in items lists
+      DSPACE_ITEM_SHOWACCESSSTATUSES: 'true'
+
+      # Allow markdown in select metadata fields
+      DSPACE_MARKDOWN_ENABLED: 'true'
     networks:
       dspacenet: {}
 
