@@ -43,14 +43,10 @@ services:
       - statistics:/app/dist/browser/assets/data:ro
 
     # Overrides for DSpace UI must start with "DSPACE_", replacing dots with
-    # underscores, and arrays are addressed by giving an index number.
+    # underscores, and arrays are addressed by giving an index number. Because
+    # array overrides are a mess, anything that doesn't vary by environment
+    # should be in the config file instead (see conf/angular/config.yml).
     environment:
-      DSPACE_THEMES_0_NAME: custom
-      DSPACE_THEMES_0_HEADTAGS_1_TAGNAME: link
-      DSPACE_THEMES_0_HEADTAGS_1_ATTRIBUTES_REL: icon
-      DSPACE_THEMES_0_HEADTAGS_1_ATTRIBUTES_HREF: assets/custom/images/favicons/favicon-32x32.png
-      DSPACE_THEMES_0_HEADTAGS_1_ATTRIBUTES_SIZES: any
-
       # Where the UI server listens inside the container; the web proxy
       # forwards requests here
       DSPACE_UI_SSL: 'false'
