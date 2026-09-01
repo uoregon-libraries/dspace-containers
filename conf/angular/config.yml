@@ -9,16 +9,6 @@ themes:
       - tagName: link
         attributes:
           rel: icon
-          href: assets/custom/images/favicons/favicon.ico
-          sizes: any
-      - tagName: link
-        attributes:
-          rel: icon
-          href: assets/custom/images/favicons/favicon.svg
-          type: image/svg+xml
-      - tagName: link
-        attributes:
-          rel: icon
           href: assets/custom/images/favicons/favicon-32x32.png
           type: image/png
           sizes: 32x32
