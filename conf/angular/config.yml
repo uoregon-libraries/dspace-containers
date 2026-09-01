@@ -1,0 +1,24 @@
+# Some DSpace configuration is very difficult (impossible depending on the
+# setting) to set as environment variables, and doesn't need to change per env
+# anyway, so put that stuff here.
+
+# Set up "custom" theme w/ its head tags
+themes:
+  - name: custom
+    headTags:
+      - tagName: link
+        attributes:
+          rel: icon
+          href: assets/custom/images/favicons/favicon.ico
+          sizes: any
+      - tagName: link
+        attributes:
+          rel: icon
+          href: assets/custom/images/favicons/favicon.svg
+          type: image/svg+xml
+      - tagName: link
+        attributes:
+          rel: icon
+          href: assets/custom/images/favicons/favicon-32x32.png
+          type: image/png
+          sizes: 32x32
