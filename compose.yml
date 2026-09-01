@@ -71,6 +71,15 @@ services:
       DSPACE_REST_HOST: ${PUBLIC_HOST:?PUBLIC_HOST must be set}
       DSPACE_REST_PORT: ${PUBLIC_PORT:?PUBLIC_PORT must be set}
       DSPACE_REST_NAMESPACE: /server
+
+      # The amount of time in ms before the idle warning is shown
+      DSPACE_AUTH_UI_TIMEUNTILIDLE: ${TIME_UNTIL_IDLE:-1800000}
+
+      # Show the item access status label in items lists
+      DSPACE_ITEM_SHOWACCESSSTATUSES: 'true'
+
+      # Allow markdown in select metadata fields
+      DSPACE_MARKDOWN_ENABLED: 'true'
     networks:
       dspacenet: {}
 
