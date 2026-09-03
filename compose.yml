@@ -98,11 +98,31 @@ services:
     # See https://github.com/DSpace/DSpace/blob/main/dspace/config/config-definition.xml
     environment:
       LOGGING_CONFIG: /usr/local/dspace/config/log4j2-container.xml
+
       dspace__P__name: ${DSPACE_NAME:?DSPACE_NAME must be set}
+      dspace__P__shortname: ${DSPACE_NAME:?DSPACE_NAME must be set}
       dspace__P__server__P__url: ${PUBLIC_URL:?PUBLIC_URL must be set}/server
       dspace__P__ui__P__url: ${PUBLIC_URL:?PUBLIC_URL must be set}
       proxies__P__trusted__P__ipranges: ${DSPACE_SUBNET:?DSPACE_SUBNET must be set}
       dspace__P__server__P__ssr__P__url: http://rest:8080/server
+
+      mail__P__server: ${MAIL_SERVER:?MAIL_SERVER must be set}
+      mail__P__from__P__address: ${FROM_ADDRESS:?FROM_ADDRESS must be set}
+      mail__P__admin: ${MAIL_ADMIN:?MAIL_ADMIN must be set}
+
+      handle__P__canonical__P__prefix: https://hdl.handle.net/
+      handle__P__prefix: ${HANDLE_PREFIX:-12345678}
+
+      crosswalk__D__dissemination__D__DataCite__D__publisher: ${DSPACE_NAME:?DSPACE_NAME must be set}
+
+      google__P__analytics__P__key: ${GA_KEY:-}
+      
+      webui__P__strengths__P__show: true
+      webui__P__user__P__assumelogin: true
+
+      embargo__P__field__P__terms: dc.description.embargo
+      embargo__P__field__P__lift: dc.description.embargo
+
       JAVA_OPTS: ${REST_JAVA_OPTS:-}
 
     depends_on:

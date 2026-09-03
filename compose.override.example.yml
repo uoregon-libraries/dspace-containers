@@ -14,6 +14,13 @@ services:
     volumes:
       - ./exports/db:/docker-entrypoint-initdb.d/
 
+  rest:
+    environment:
+      plugin__P__sequence__P__org__P__dspace__P__authenticate__P__AuthenticationMethod: >-
+        org.dspace.authenticate.IPAuthentication,
+        org.dspace.authenticate.PasswordAuthentication
+      authentication__D__ip__P__UO\ Only: ${AUTHENTICATION_IPS:-}
+
   # Development alternative: run the live-reload dev server instead of the
   # compiled production bundle. The bind mount lets you edit your
   # dspace-angular checkout on the host and see changes without rebuilding;
