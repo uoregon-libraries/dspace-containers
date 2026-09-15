@@ -45,14 +45,15 @@ Next, you'll want to get an export and import it locally:
 1. Reindex: `docker compose exec rest /usr/local/dspace/bin/dspace index-discovery -b`
 
 For statistics data:
-1. `ssh` into the server running solr
-1. Execute `curl "http://localhost:8983/solr/statistics/replication?command=backup"`
-1. `scp` or `rsync` the export into `exports/solr`
-1. Get your `exports/solr` into the db container, e.g., with a compose override
-   that adds a volume: `./exports/solr:/var/solr/data/statistics/data`
-1. *Remove* your current database volume, e.g., `docker volume rm dspace_solr`
+1. `ssh` into the server running DSpace
+1. Execute `[dspace]/bin/dspace solr-export-statistics`
+1. `scp` or `rsync` the exported csvs into `exports/solr`
+1. Get your `exports/solr` into the rest container, e.g., with a compose override
+   that adds a volume: `./exports/solr:/usr/local/dspace/solr-export`
+1. *Remove* your current solr volume, e.g., `docker volume rm dspace_solr`
 1. Restart the stack
-1. Reindex: `docker compose exec rest /usr/local/dspace/bin/dspace index-discovery -b`
+1. Import statistics index: `docker compose exec rest /usr/local/dspace/bin/dspace solr-import-statistics`
+1. Reindex search index: `docker compose exec rest /usr/local/dspace/bin/dspace index-discovery -b`
 1. Generate site-wide statistics files: `docker compose exec rest /usr/local/dspace/bin/update-stats`
 
 ## Create local admin
