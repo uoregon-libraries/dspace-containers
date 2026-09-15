@@ -14,17 +14,14 @@ services:
     volumes:
       - ./exports/db:/docker-entrypoint-initdb.d/
 
-  # Only use this if you have a solr core backup you want to import
-  solr:
-    volumes:
-      - ./exports/solr:/var/solr/data/statistics/data
-
   rest:
     environment:
       plugin__P__sequence__P__org__P__dspace__P__authenticate__P__AuthenticationMethod: >-
         org.dspace.authenticate.IPAuthentication,
         org.dspace.authenticate.PasswordAuthentication
       authentication__D__ip__P__UO\ Only: ${AUTHENTICATION_IPS:-}
+    volumes:
+     - ./exports/solr:/usr/local/dspace/solr-export
 
   # Development alternative: run the live-reload dev server instead of the
   # compiled production bundle. The bind mount lets you edit your
