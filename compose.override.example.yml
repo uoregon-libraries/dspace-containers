@@ -20,6 +20,8 @@ services:
         org.dspace.authenticate.IPAuthentication,
         org.dspace.authenticate.PasswordAuthentication
       authentication__D__ip__P__UO\ Only: ${AUTHENTICATION_IPS:-}
+    volumes:
+     - ./exports/solr:/usr/local/dspace/solr-export
 
   # Development alternative: run the live-reload dev server instead of the
   # compiled production bundle. The bind mount lets you edit your
