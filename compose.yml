@@ -98,7 +98,6 @@ services:
     # See https://github.com/DSpace/DSpace/blob/main/dspace/config/config-definition.xml
     environment:
       LOGGING_CONFIG: /usr/local/dspace/config/log4j2-container.xml
-
       dspace__P__name: ${DSPACE_NAME:?DSPACE_NAME must be set}
       dspace__P__shortname: ${DSPACE_NAME:?DSPACE_NAME must be set}
       dspace__P__server__P__url: ${PUBLIC_URL:?PUBLIC_URL must be set}/server
