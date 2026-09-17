@@ -44,6 +44,18 @@ Next, you'll want to get an export and import it locally:
    (faster than the angular side boots up)
 1. Reindex: `docker compose exec rest /usr/local/dspace/bin/dspace index-discovery -b`
 
+For statistics data:
+1. `ssh` into the server running DSpace
+1. Execute `[dspace]/bin/dspace solr-export-statistics`
+1. `scp` or `rsync` the exported csvs into `exports/solr`
+1. Get your `exports/solr` into the rest container, e.g., with a compose override
+   that adds a volume: `./exports/solr:/usr/local/dspace/solr-export`
+1. *Remove* your current solr volume, e.g., `docker volume rm dspace_solr`
+1. Restart the stack
+1. Import statistics index: `docker compose exec rest /usr/local/dspace/bin/dspace solr-import-statistics`
+1. Reindex search index: `docker compose exec rest /usr/local/dspace/bin/dspace index-discovery -b`
+1. Generate site-wide statistics files: `docker compose exec rest /usr/local/dspace/bin/update-stats`
+
 ## Create local admin
 
 You'll probably want a local admin for easier access:
