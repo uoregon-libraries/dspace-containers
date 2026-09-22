@@ -39,17 +39,17 @@ services:
       target: production
     depends_on:
       - rest
+    volumes:
+      - statistics:/app/dist/browser/assets/data:ro
 
     # Overrides for DSpace UI must start with "DSPACE_", replacing dots with
-    # underscores, and arrays are addressed by giving an index number. The
-    # HEADTAGS are here for reference, but they aren't actually being respected
-    # for some reason.
+    # underscores, and arrays are addressed by giving an index number.
     environment:
       DSPACE_THEMES_0_NAME: custom
-      DSPACE_THEMES_0_HEADTAGS_0_TAGNAME: link
-      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_REL: icon
-      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_HREF: /path/to/favicon-32x32.png
-      DSPACE_THEMES_0_HEADTAGS_0_ATTRIBUTES_SIZES: any
+      DSPACE_THEMES_0_HEADTAGS_1_TAGNAME: link
+      DSPACE_THEMES_0_HEADTAGS_1_ATTRIBUTES_REL: icon
+      DSPACE_THEMES_0_HEADTAGS_1_ATTRIBUTES_HREF: assets/custom/images/favicons/favicon-32x32.png
+      DSPACE_THEMES_0_HEADTAGS_1_ATTRIBUTES_SIZES: any
 
       # Where the UI server listens inside the container; the web proxy
       # forwards requests here
@@ -71,6 +71,15 @@ services:
       DSPACE_REST_HOST: ${PUBLIC_HOST:?PUBLIC_HOST must be set}
       DSPACE_REST_PORT: ${PUBLIC_PORT:?PUBLIC_PORT must be set}
       DSPACE_REST_NAMESPACE: /server
+
+      # The amount of time in ms before the idle warning is shown
+      DSPACE_AUTH_UI_TIMEUNTILIDLE: ${TIME_UNTIL_IDLE:-1800000}
+
+      # Show the item access status label in items lists
+      DSPACE_ITEM_SHOWACCESSSTATUSES: 'true'
+
+      # Allow markdown in select metadata fields
+      DSPACE_MARKDOWN_ENABLED: 'true'
     networks:
       dspacenet: {}
 
@@ -89,11 +98,31 @@ services:
     # See https://github.com/DSpace/DSpace/blob/main/dspace/config/config-definition.xml
     environment:
       LOGGING_CONFIG: /usr/local/dspace/config/log4j2-container.xml
+
       dspace__P__name: ${DSPACE_NAME:?DSPACE_NAME must be set}
+      dspace__P__shortname: ${DSPACE_NAME:?DSPACE_NAME must be set}
       dspace__P__server__P__url: ${PUBLIC_URL:?PUBLIC_URL must be set}/server
       dspace__P__ui__P__url: ${PUBLIC_URL:?PUBLIC_URL must be set}
       proxies__P__trusted__P__ipranges: ${DSPACE_SUBNET:?DSPACE_SUBNET must be set}
       dspace__P__server__P__ssr__P__url: http://rest:8080/server
+
+      mail__P__server: ${MAIL_SERVER:?MAIL_SERVER must be set}
+      mail__P__from__P__address: ${FROM_ADDRESS:?FROM_ADDRESS must be set}
+      mail__P__admin: ${MAIL_ADMIN:?MAIL_ADMIN must be set}
+
+      handle__P__canonical__P__prefix: https://hdl.handle.net/
+      handle__P__prefix: ${HANDLE_PREFIX:-12345678}
+
+      crosswalk__D__dissemination__D__DataCite__D__publisher: ${DSPACE_NAME:?DSPACE_NAME must be set}
+
+      google__P__analytics__P__key: ${GA_KEY:-}
+      
+      webui__P__strengths__P__show: true
+      webui__P__user__P__assumelogin: true
+
+      embargo__P__field__P__terms: dc.description.embargo
+      embargo__P__field__P__lift: dc.description.embargo
+
       JAVA_OPTS: ${REST_JAVA_OPTS:-}
 
     depends_on:
@@ -103,6 +132,7 @@ services:
       dspacenet: {}
     volumes:
       - assetstore:/usr/local/dspace/assetstore
+      - statistics:/usr/local/dspace/statistics
 
   db:
     build:
@@ -159,3 +189,4 @@ volumes:
   solr: {}
   tps-data: {}
   caddy-conf: {}
+  statistics: {}

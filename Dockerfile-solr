@@ -1,6 +1,9 @@
-FROM docker.io/solr:8.11-slim
+FROM docker.io/solr:9.10
 
 COPY conf/solr /var/local/solr-configsets
+ENV SOLR_OPTS="-Dsolr.config.lib.enabled=true"
+
+RUN mkdir -p /var/solr/data
 RUN precreate-core authority /var/local/solr-configsets/authority
 RUN precreate-core oai /var/local/solr-configsets/oai
 RUN precreate-core search /var/local/solr-configsets/search
