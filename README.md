@@ -56,12 +56,35 @@ For statistics data:
 1. Reindex search index: `docker compose exec rest /usr/local/dspace/bin/dspace index-discovery -b`
 1. Generate site-wide statistics files: `docker compose exec rest /usr/local/dspace/bin/update-stats`
 
-## Create local admin
+## CLI / cron jobs / one-offs
 
-You'll probably want a local admin for easier access:
+The compose setup has a `cli` service under the "tools" profile. This allows
+running cron jobs and any other short-lived commands in a CLI-optimized
+container:
 
 ```bash
-docker compose run --rm -it rest /usr/local/dspace/bin/dspace create-administrator -e admin@example.org -p adm -f Ad -l Min
+docker compose --profile tools run --rm cli <command>
+```
+
+Notes:
+
+- Yes, this is unweildy, but it ensures the `cli` container never starts up
+  with other services
+  - A bash alias can help: `alias dspace-cli='docker compose --profile tools run --rm cli'`
+- The image adds `/usr/local/dspace/bin` to `$PATH` so that any commands there
+  can be specified without a full path, which hopefully makes it slightly less
+  unweildy.
+- Anything that is *not* a known command / binary (in the image's path) will
+  automatically be treated as a DSpace command, which means we "route" it
+  through `/usr/local/dspace/bin/dspace`. e.g., running `foo` will actually
+  invoke `/usr/local/dspace/bin/dspace foo`.
+
+## Create local admin
+
+You'll probably want a local admin for easier access. Use the `cli` service:
+
+```bash
+docker compose --profile tools run --rm cli create-administrator -e admin@example.org -p adm -f Ad -l Min
 ```
 
 ## Configure
