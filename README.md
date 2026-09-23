@@ -1,8 +1,8 @@
 # DSpace Compose Wrapper Thing
 
-This is a compose setup with various Dockerfiles for recreating a fairly close
-approximation of our production setup for running DSpace. This is *mostly* for
-development, but we're trying to make it more production-ready.
+This is a compose setup with various Dockerfiles for running DSpace. This is
+meant to work for both development and production, but as such does require
+careful per-environment setup.
 
 ## Get projects
 
@@ -31,7 +31,10 @@ Build the images, e.g., `docker compose build`. This can take a long time....
 
 ## Get data
 
-Next, you'll want to get an export and import it locally:
+If you're doing dev or standing up a staging server, you'll want to get an
+export from production and import it locally:
+
+*(Note: once we're in containers for prod, we'll have to revisit this!)*
 
 1. Stop the stack if it's running
 1. `ssh` into the server that runs your database
