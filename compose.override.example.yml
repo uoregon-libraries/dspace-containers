@@ -8,6 +8,11 @@ services:
     # Expose caddy to your host - this is required
     ports:
       - 0.0.0.0:8080:80
+    # Expose smtpdebug's captured emails at /.smtp-debug/ (restricted to
+    # CADDY_ADMIN_CIDR). Caddy only enables that route when this mount exists,
+    # so drop it along with the smtpdebug service.
+    volumes:
+      - smtp-debug-logs:/var/local/smtp-debug-logs:ro
 
   # Only use this if you have a DB dump you want to import
   db:

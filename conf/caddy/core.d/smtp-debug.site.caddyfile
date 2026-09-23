@@ -1,0 +1,23 @@
+# Dev/staging only: browse the smtpdebug service's captured emails at
+# /.smtp-debug/. This is inert unless an override mounts the smtp-debug-logs
+# volume into the web service (see compose.override.example.yml): the file
+# matcher only succeeds when the mount point exists, and the image never
+# creates it. Without the mount, requests fall through to normal routing.
+@smtpdebug {
+	path /.smtp-debug /.smtp-debug/*
+	file {
+		root /var/local/smtp-debug-logs
+		try_files /
+	}
+}
+handle @smtpdebug {
+	# Emails can contain password-reset links and the like, so keep this to
+	# the same range as the TPS admin pages
+	@notallowed not client_ip {$CADDY_ADMIN_CIDR}
+	respond @notallowed 404
+
+	redir /.smtp-debug /.smtp-debug/
+	uri strip_prefix /.smtp-debug
+	root * /var/local/smtp-debug-logs
+	file_server browse
+}
