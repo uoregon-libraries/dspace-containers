@@ -134,6 +134,18 @@ services:
       - assetstore:/usr/local/dspace/assetstore
       - statistics:/usr/local/dspace/statistics
 
+  # "cli": one-off DSpace commands (cron jobs / admin tasks), e.g.:
+  #
+  #   docker compose --profile tools run --rm --no-deps -T cli index-discovery -b
+  #
+  # See README.md for more details.
+  cli:
+    extends:
+      service: rest
+    profiles: [tools]
+    environment:
+      JAVA_OPTS: ${CLI_JAVA_OPTS:-}
+
   db:
     build:
       dockerfile: Dockerfile-pgsql
