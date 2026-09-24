@@ -8,6 +8,11 @@ services:
     # Expose caddy to your host - this is required
     ports:
       - 0.0.0.0:8080:80
+    # Expose smtpdebug's captured emails at /.smtp-debug/ (restricted to
+    # CADDY_ADMIN_CIDR). Caddy only enables that route when this mount exists,
+    # so drop it along with the smtpdebug service.
+    volumes:
+      - smtp-debug-logs:/var/local/smtp-debug-logs:ro
 
   # Only use this if you have a DB dump you want to import
   db:
@@ -37,18 +42,34 @@ services:
   #    - node-modules:/app/node_modules
   #    - angular-cache:/app/.angular
 
-# Development: the two volumes we added on the "angular" service have to be
-# defined since they're not part of the base compose setup. Then, if desired,
-# redefine `caddy-conf` for testing out caddyfile drop-ins. NOTE: for volumes
-# that compose doesn't fully manage (`DEV-VOLS/caddy-conf.d` in this example),
-# you have to create the directory manually.
-#
-#volumes:
-#  node-modules: {}
-#  angular-cache: {}
-#  caddy-conf:
-#    driver: local
-#    driver_opts:
-#      type: none
-#      o: bind
-#      device: ${PWD}/DEV-VOLS/caddy-conf.d
+  # SMTP debug service: this is mandatory for testing emails in dev. Set the
+  # MAIL_SERVER var to "smtpdebug" for this to work.
+  smtpdebug:
+    build:
+      context: .
+      dockerfile: Dockerfile-smtpdebug
+    volumes:
+      - smtp-debug-logs:/var/local/smtp-debug-logs:rw
+
+volumes:
+  smtp-debug-logs: {}
+
+  # You can comment these out if you're not using the angular setup above, but
+  # leaving them won't hurt, either, it just creates empty volumes.
+  node-modules: {}
+  angular-cache: {}
+
+  # For caddyfile drop-ins, you can just redefine the volume. You can put an
+  # inline bind volume on the web service, too, but this ensures you don't
+  # forget the mode (readonly), and ensures the path keeps working if the main
+  # compose file mounts "caddy-conf" to a different place.
+  #
+  # NOTE: this is still a bind mount, so you have to create the directory
+  # manually, and podman won't delete the contents when you remove the volume.
+  #
+  #caddy-conf:
+  #  driver: local
+  #  driver_opts:
+  #    type: none
+  #    o: bind
+  #    device: ${PWD}/DEV-VOLS/caddy-conf.d
