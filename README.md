@@ -29,36 +29,6 @@ etc.) and doing a full image rebuild.
 
 Build the images, e.g., `docker compose build`. This can take a long time....
 
-## Get data
-
-If you're doing dev or standing up a staging server, you'll want to get an
-export from production and import it locally:
-
-*(Note: once we're in containers for prod, we'll have to revisit this!)*
-
-1. Stop the stack if it's running
-1. `ssh` into the server that runs your database
-1. Execute `pg_dump -U dspace dspace > /tmp/pg.sql`
-1. `scp` or `rsync` the export into `exports/db`, e.g., `scp server@university.edu:/tmp/pg.sql ./exports/db`
-1. Get your `exports/db` into the db container, e.g., with a compose override
-   that adds a volume: `./exports/db:/docker-entrypoint-initdb.d`
-1. *Remove* your current database volume, e.g., `docker volume rm dspace_db`
-1. Start the stack up again, and postgres will import the SQL fairly quickly
-   (faster than the angular side boots up)
-1. Reindex: `docker compose exec rest /usr/local/dspace/bin/dspace index-discovery -b`
-
-For statistics data:
-1. `ssh` into the server running DSpace
-1. Execute `[dspace]/bin/dspace solr-export-statistics`
-1. `scp` or `rsync` the exported csvs into `exports/solr`
-1. Get your `exports/solr` into the rest container, e.g., with a compose override
-   that adds a volume: `./exports/solr:/usr/local/dspace/solr-export`
-1. *Remove* your current solr volume, e.g., `docker volume rm dspace_solr`
-1. Restart the stack
-1. Import statistics index: `docker compose exec rest /usr/local/dspace/bin/dspace solr-import-statistics`
-1. Reindex search index: `docker compose exec rest /usr/local/dspace/bin/dspace index-discovery -b`
-1. Generate site-wide statistics files: `docker compose exec rest /usr/local/dspace/bin/update-stats`
-
 ## CLI / cron jobs / one-offs
 
 The compose setup has a `cli` service under the "tools" profile. This allows
@@ -82,7 +52,40 @@ Notes:
   through `/usr/local/dspace/bin/dspace`. e.g., running `foo` will actually
   invoke `/usr/local/dspace/bin/dspace foo`.
 
-## Create local admin
+## Dev / test / staging
+
+### Get data
+
+If you're doing dev or standing up a staging server, you'll want to get an
+export from production and import it locally:
+
+1. Stop the stack if it's running
+1. `ssh` into the server that runs your database
+1. Execute `pg_dump -U dspace dspace > /tmp/pg.sql`
+1. `scp` or `rsync` the export into `exports/db`, e.g., `scp server@university.edu:/tmp/pg.sql ./exports/db`
+1. Get your `exports/db` into the db container, e.g., with a compose override
+   that adds a volume: `./exports/db:/docker-entrypoint-initdb.d`
+1. *Remove* your current database volume, e.g., `docker volume rm dspace_db`
+1. Start the stack up again, and postgres will import the SQL fairly quickly
+   (faster than the angular side boots up)
+1. Reindex: `docker compose --profile tools run --rm cli index-discovery -b`
+1. Note: if you aren't mirroring bitstreams, you will see a *lot* of errors
+   while DSpace tries and fails to index full-text data from PDFs and other
+   documents. You can safely ignore these.
+
+For statistics data:
+1. `ssh` into the server running DSpace
+1. Execute `[dspace]/bin/dspace solr-export-statistics`
+1. `scp` or `rsync` the exported csvs into `exports/solr`
+1. Get your `exports/solr` into the rest container, e.g., with a compose override
+   that adds a volume: `./exports/solr:/usr/local/dspace/solr-export`
+1. *Remove* your current solr volume, e.g., `docker volume rm dspace_solr`
+1. Restart the stack
+1. Import statistics index: `docker compose --profile tools run --rm solr-import-statistics`
+1. Reindex search index: `docker compose --profile tools run --rm index-discovery -b`
+1. Generate site-wide statistics files: `docker compose --profile tools run --rm update-stats`
+
+### Create local admin
 
 You'll probably want a local admin for easier access. Use the `cli` service:
 
@@ -90,7 +93,7 @@ You'll probably want a local admin for easier access. Use the `cli` service:
 docker compose --profile tools run --rm cli create-administrator -e admin@example.org -p adm -f Ad -l Min
 ```
 
-## Configure
+### Configure
 
 Copy `.env.example` to `.env` and edit it. This is **mandatory**. All
 per-environment settings live in `.env`, and you need to understand them and
@@ -106,11 +109,11 @@ One-off / temporary Caddy rules are dropped into the `caddy-conf` volume,
 applied with a restart or reload of the `web` service. See
 [docs/caddy-drop-ins.md](docs/caddy-drop-ins.md).
 
-## Start it up!
+### Start it up!
 
 Finally, start up the stack and browse to `http://localhost:8080`
 
-## Emails
+### Emails
 
 In dev or staging, you don't want emails being sent by mistake, but you still
 probably want to test out the email-sending capabilities. Enter the `smtpdebug`
