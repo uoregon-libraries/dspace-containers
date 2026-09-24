@@ -109,3 +109,22 @@ applied with a restart or reload of the `web` service. See
 ## Start it up!
 
 Finally, start up the stack and browse to `http://localhost:8080`
+
+## Emails
+
+In dev or staging, you don't want emails being sent by mistake, but you still
+probably want to test out the email-sending capabilities. Enter the `smtpdebug`
+service (seen in the example compose override):
+
+- Enable the `smtpdebug` service in your compose override
+- Mount the `smtp-debug-logs` volume both in the `smtpdebug` service *and* the
+  web service! If you don't add the volume to `web`, you won't be able to
+  easily see the captured emails.
+- Set `MAIL_SERVER=smtpdebug` in your `.env` file, and any dummy from / admin
+  emails you like.
+- Start the stack with the smtpdebug service, not just web, e.g., `podman
+  compose up -d web smtpdebug`
+- Send an email and view it: any generated emails will be visible under the URL
+  path `/.smtp-debug`
+
+A quick way to test: log in as admin and reset somebody's password.
