@@ -104,8 +104,5 @@ COPY conf/tomcat/Catalina/localhost/server.xml /usr/local/tomcat/conf/Catalina/l
 COPY conf/rest/migrate-db.sh /usr/local/scripts/migrate-db.sh
 COPY conf/rest/docker-entrypoint.sh /docker-entrypoint.sh
 
-# Make CLI logging great again
-RUN ln -sf log4j2-container.xml /usr/local/dspace/config/log4j2-cli.xml
-
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["catalina.sh", "run"]
