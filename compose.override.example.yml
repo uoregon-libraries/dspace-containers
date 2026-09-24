@@ -91,3 +91,11 @@ volumes:
   #    type: none
   #    o: bind
   #    device: ${PWD}/DEV-VOLS/caddy-conf.d
+
+  # Same idea if you want DSpace's CLI logs on the host:
+  #cli-logs:
+  #  driver: local
+  #  driver_opts:
+  #    type: none
+  #    o: bind
+  #    device: ${PWD}/DEV-VOLS/cli-logs

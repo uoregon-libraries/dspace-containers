@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Logging configuration for DSpace command line tools. This is DSpace's
+     stock log4j2-cli.xml, except each run gets its own log file instead of
+     sharing a daily one, and the checksum checker logs there too. -->
+<Configuration strict='true'
+               xmlns='http://logging.apache.org/log4j/2.0/config'>
+
+    <Properties>
+        <Property name='log.dir'>${log4j:configParentLocation}/../log</Property>
+
+        <!-- The entrypoint names each run's log file via CLI_LOG_FILE. Runs
+             that bypass it (e.g., "exec" into the rest container) get a
+             generic timestamped name. -->
+        <Property name='log.file'>${env:CLI_LOG_FILE:-${log.dir}/dspace-cli_${date:yyyy-MM-dd_HHmmss}.log}</Property>
+
+        <!-- Log level for all DSpace-specific code (org.dspace.*)
+             Possible values (from most to least info):
+             DEBUG, INFO, WARN, ERROR, FATAL -->
+        <Property name='loglevel.dspace'>INFO</Property>
+
+        <!-- Log level for other third-party tools/APIs used by DSpace
+             Possible values (from most to least info):
+             DEBUG, INFO, WARN, ERROR, FATAL -->
+        <Property name='loglevel.other'>INFO</Property>
+    </Properties>
+
+    <Appenders>
+        <Appender name='A1'
+                  type='File'
+                  fileName='${log.file}'>
+            <!-- NOTE: The %equals patterns are providing a default value of "unknown" if "correlationID" or
+                 "requestID" are not currently set in the ThreadContext. -->
+            <Layout type='PatternLayout'
+                    pattern='%d %-5p %equals{%X{correlationID}}{}{unknown} %equals{%X{requestID}}{}{unknown} %c @ %m%n'/>
+        </Appender>
+    </Appenders>
+
+    <Loggers>
+
+        <!-- Most parts of DSpace -->
+        <Logger name='org.dspace'
+                level='${loglevel.dspace}'
+                additivity='false'>
+            <AppenderRef ref='A1'/>
+        </Logger>
+
+        <!-- Block services logging except on exceptions -->
+        <Logger name='org.dspace.kernel'
+                level='ERROR'/>
+        <Logger name='org.dspace.services'
+                level='ERROR'/>
+        <Logger name='org.dspace.servicemanager'
+                level='WARN'/>
+        <Logger name='org.dspace.providers'
+                level='ERROR'/>
+        <Logger name='org.dspace.utils'
+                level='ERROR'/>
+
+        <!-- Block passwords from being exposed in Axis logs. (DEBUG exposes passwords in Basic Auth) -->
+        <Logger name='org.apache.axis.handlers.http.HTTPAuthHandler'
+                level='INFO'/>
+        <!-- Anything not a part of DSpace -->
+        <Root level='${loglevel.other}'>
+            <AppenderRef ref='A1'/>
+        </Root>
+    </Loggers>
+</Configuration>

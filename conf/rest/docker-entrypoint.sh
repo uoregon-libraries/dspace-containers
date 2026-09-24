@@ -39,5 +39,12 @@ if [ "$1" = "catalina.sh" ]; then
   run_init
 fi
 
+# DSpace commands each log to their own file (see log4j2-cli.xml)
+if [ "$1" = "$DSPACE/bin/dspace" ] || [ "$1" = "dspace" ]; then
+  name="${2:-dspace}"
+  export CLI_LOG_FILE="$DSPACE/log/${name//[^A-Za-z0-9._-]/_}_$(date +%Y-%m-%d_%H%M%S).log"
+  echo "Logging to $CLI_LOG_FILE"
+fi
+
 echo "Executing $*"
 exec "$@"

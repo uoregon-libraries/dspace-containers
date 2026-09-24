@@ -133,6 +133,10 @@ services:
     volumes:
       - assetstore:/usr/local/dspace/assetstore
       - statistics:/usr/local/dspace/statistics
+      # Tomcat won't write logs here, but we mount it here since "cli" inherits
+      # this setting, and then we catch any one-offs accidentally run against
+      # the "rest" service
+      - cli-logs:/usr/local/dspace/log
 
   # "cli": one-off DSpace commands (cron jobs / admin tasks), e.g.:
   #
@@ -202,3 +206,4 @@ volumes:
   tps-data: {}
   caddy-conf: {}
   statistics: {}
+  cli-logs: {}
