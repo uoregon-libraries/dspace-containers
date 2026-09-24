@@ -52,9 +52,11 @@ Notes:
   through `/usr/local/dspace/bin/dspace`. e.g., running `foo` will actually
   invoke `/usr/local/dspace/bin/dspace foo`.
 - DSpace's logs go to files in the `cli-logs` volume (`/usr/local/dspace/log`),
-  and the logs roll over daily via some kind of built-in DSpace magic. Mount
-  them on the host or use the `cli` service to read them (e.g., via an
-  in-container `tail` or `cat` of `/usr/local/dspace/log/dspace-cli.log`)
+  one per run, named for the command and its start time (UTC), e.g.,
+  `index-discovery_2026-09-24_030000.log`. Mount them on the host or use the
+  `cli` service to read them (e.g., via an in-container `tail` or `cat`)
+  - Nothing cleans these up automatically, so set up your own rotation /
+    retention (e.g., a host cron job against a bind-mounted `cli-logs`)
 
 ## Dev / test / staging
 

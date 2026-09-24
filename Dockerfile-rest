@@ -102,6 +102,7 @@ ENV PATH=/usr/local/dspace/bin:$PATH
 COPY conf/tomcat/server.xml /usr/local/tomcat/conf/server.xml
 COPY conf/tomcat/Catalina/localhost/server.xml /usr/local/tomcat/conf/Catalina/localhost/server.xml
 COPY conf/rest/migrate-db.sh /usr/local/scripts/migrate-db.sh
+COPY conf/rest/log4j2-cli.xml /usr/local/dspace/config/log4j2-cli.xml
 COPY conf/rest/docker-entrypoint.sh /docker-entrypoint.sh
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
