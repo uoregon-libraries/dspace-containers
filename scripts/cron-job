@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+#
+# Runs one command in the "cli" service on behalf of cron. The crontab that
+# render-crontab generates calls this for every job. See "Scheduled jobs" in
+# README.md for details.
+
+set -uo pipefail
+
+if [ $# -eq 0 ]; then
+  echo "usage: $0 <command> [args...]" >&2
+  exit 64
+fi
+
+# Change to project dir so compose works properly
+cd "$(dirname "$0")/.." || exit 1
+
+# One lock per distinct command line, per project
+project=$(basename "$PWD")
+key=$(printf '%s' "$*" | tr -c 'A-Za-z0-9._-' '_')
+lockdir=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+exec 9>"$lockdir/$project-cron-$key.lock" || exit 1
+if ! flock -n 9; then
+  echo "$*: skipped; the previous run is still going"
+  exit 1
+fi
+
+# Hold output until end of script so we can make success silent (avoids cron
+# spamming unnecessarily)
+out=$(mktemp) || exit 1
+trap 'rm -f "$out"' EXIT
+
+# --no-deps: a job must never start a stack that someone stopped on purpose
+podman-compose --profile tools run --rm --no-deps -T cli "$@" >"$out" 2>&1
+rc=$?
+
+if [ "$rc" -ne 0 ]; then
+  cat "$out"
+  printf '\n%s: exit status %d\n' "$*" "$rc"
+fi
+exit "$rc"

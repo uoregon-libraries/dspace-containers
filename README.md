@@ -55,8 +55,90 @@ Notes:
   one per run, named for the command and its start time (UTC), e.g.,
   `index-discovery_2026-09-24_030000.log`. Mount them on the host or use the
   `cli` service to read them (e.g., via an in-container `tail` or `cat`)
-  - Nothing cleans these up automatically, so set up your own rotation /
-    retention (e.g., a host cron job against a bind-mounted `cli-logs`)
+
+## Scheduled jobs
+
+Compose makes cron hard, and DSpace needs a *lot* of cron love. We had to put
+together some weird magic to make it work in a semi-nice way.
+
+High-level info:
+
+- The host's cron runs jobs in a throwaway container (using the `cli` service)
+- `conf/crontab` lists all jobs in a sort of "pseudo-crontab" format. It is
+  *not usable* as-is.
+- `bin/render-crontab` fills in `conf/crontab` and prints a usable crontab to
+  stdout (suitable for dropping into `/etc/cron.d/`, for instance)
+
+### Setup
+
+Probably only for production. Dev definitely doesn't need cron jobs, and
+staging *probably* doesn't.
+
+1. Set `CRON_MAILTO` in `.env` to where job failures should be emailed
+1. Build the renderer: `make bin/render-crontab`. This needs Go, but the
+   result is a static binary, so you can build it elsewhere and copy it to
+   `bin/` on the server.
+1. As the podman user, from the project dir, render and install the crontab
+   file (see below). Always render to a file first; if rendering fails, it
+   prints nothing.
+1. You *must* rerender if you change `conf/crontab` or `CRON_MAILTO`, move the
+   project to a new dir, or move `podman-compose`
+
+To set up a system crontab:
+
+```bash
+bin/render-crontab -user "$(whoami)" > /tmp/sb.cron
+sudo install -m 644 -o root -g root /tmp/sb.cron /etc/cron.d/scholarsbank
+```
+
+The file must be owned by root and not group- or world-writable
+
+*Note*: setting up a user crontab needs a bit of care and isn't directly
+supported. This info can help, but you'll be mostly on your own.
+
+### How jobs run
+
+Jobs run through a wrapper (`scripts/cron-job`). You can also run that manually
+to get an exact test of how cron will behave.
+
+Notes about this wrapper:
+
+- It uses the `cli` service, so only the dspace subcommand or binary is
+  specified, e.g., `scripts/cron-job index-discovery`
+- It runs compose from the project root; podman compose needs this to load `.env`
+  and `compose.override.yml`
+- A successful job prints nothing while a failed job prints its output and exit
+  status, which cron emails to `CRON_MAILTO`
+- If the same command is still running from its last scheduled run, the new
+  run is skipped and reported as a failure
+- Jobs never start dependencies - if the stack is down, they will fail (no db,
+  no Solr, etc.) and email you
+- It calls `podman-compose` directly (not `podman compose`), and it expects the
+  stack's user to have lingering enabled; this is required for rootless podman
+  anyway, so should be a non-issue
+
+### Modifying jobs
+
+If you edit `conf/crontab`, a few things to keep in mind:
+
+- Don't put user, path, mailto, etc. here: the renderer does this
+- Don't try to set environment variables here unless you actually know what
+  they do: they will affect the compose run, *not* the container, or at least
+  not directly. You'll get confused. Don't do it.
+- Each entry is a cron schedule followed by a command sent to the `cli`
+  service. Understand the cli service (see above) before you touch this file.
+- One command per line, and don't get fancy! ";", "&&", pipes, and redirects
+  run on the host, *not the container*. To chain commands in the container,
+  quote them: `sh -c 'dspace a && dspace b'`. Better yet, don't do this. Write
+  a script instead.
+- Cron treats a bare "%" as a newline, so write it as "\%"
+- Again, times use the host clock/timezone. In practice this usually matches
+  our containers' times, but be aware just in case.
+
+The renderer refuses to print anything if a schedule is malformed (e.g., a
+missing field) or a command has host-shell syntax (`;`, `&`, `|`, redirects,
+`$`, a bare `%`, ...) outside of quotes. Run it after editing to check your
+work: `bin/render-crontab > /dev/null`.
 
 ## Dev / test / staging
 

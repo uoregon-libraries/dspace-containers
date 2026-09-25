@@ -2,7 +2,7 @@ TPL := tps-templates
 
 .PHONY: tools base-template final-templates clean
 
-tools: bin/htmlfmt bin/assemble
+tools: bin/htmlfmt bin/assemble bin/render-crontab
 
 bin/htmlfmt: tools/htmlfmt/*.go tools/htmlfmt/go.mod
 	mkdir -p bin
@@ -11,6 +11,10 @@ bin/htmlfmt: tools/htmlfmt/*.go tools/htmlfmt/go.mod
 bin/assemble: tools/assemble/*.go tools/assemble/go.mod
 	mkdir -p bin
 	go build -C tools/assemble -o $(abspath bin/assemble)
+
+bin/render-crontab: tools/render-crontab/*.go tools/render-crontab/go.mod
+	mkdir -p bin
+	go build -C tools/render-crontab -o $(abspath bin/render-crontab)
 
 # Reformat the raw SingleFile snapshot and extract its CSS to sb.css. The
 # result still needs the manual cleanup described in tps-templates/README.md
@@ -25,4 +29,4 @@ final-templates: bin/assemble
 	./bin/assemble -dir $(TPL) -page failed
 
 clean:
-	rm -f bin/htmlfmt bin/assemble $(TPL)/challenge.go.html $(TPL)/failed.go.html
+	rm -f bin/* $(TPL)/challenge.go.html $(TPL)/failed.go.html
