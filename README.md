@@ -173,6 +173,34 @@ For statistics data:
 1. Reindex search index: `docker compose --profile tools run --rm index-discovery -b`
 1. Generate site-wide statistics files: `docker compose --profile tools run --rm update-stats`
 
+### IdP
+
+For dev, we use [go-saml][go-saml-github] (the `idp` service in the `local-dev`
+profile) and a local key pair. Set `COMPOSE_PROFILES=local-dev` and
+`DEV_IDP_URL` (a URL your browser can reach on port 8081) in `.env`, publish
+the port and make `rest` wait for `idp` in your compose override (see
+`compose.override.example.yml`), and start the stack as usual.
+
+On startup the IdP registers the `DEV_IDP_USERS` (default `alice,bob`; each
+user's password is their name), then waits for DSpace and registers it as a
+service provider. Choose the SSO login option in DSpace and sign in as one of
+those users. The first login creates the DSpace account (`SAML_AUTOREGISTER`).
+
+The IdP doesn't support single logout, so to switch users, log out of DSpace
+and then either clear the browser's cookies for the IdP, or restart it:
+`docker compose restart idp`. The IdP keeps everything in memory and
+re-provisions itself when it starts.
+
+If new DSpace SAML keys need to be built, do this:
+
+```bash
+openssl req -x509 -newkey rsa:3072 -nodes -days 3650 \
+  -keyout conf/rest/dev-saml-sp.key -out conf/rest/dev-saml-sp.crt \
+  -subj "/CN=scholarsbank-dev-sp"
+```
+
+[go-saml-github]: <https://github.com/uoregon-libraries/go-saml>
+
 ### Create local admin
 
 You'll probably want a local admin for easier access. Use the `cli` service:
@@ -205,16 +233,17 @@ Finally, start up the stack and browse to `http://localhost:8080`
 
 In dev or staging, you don't want emails being sent by mistake, but you still
 probably want to test out the email-sending capabilities. Enter the `smtpdebug`
-service (seen in the example compose override):
+service (part of the `local-dev` profile):
 
-- Enable the `smtpdebug` service in your compose override
-- Mount the `smtp-debug-logs` volume both in the `smtpdebug` service *and* the
-  web service! If you don't add the volume to `web`, you won't be able to
-  easily see the captured emails.
+- Enable the profile: `COMPOSE_PROFILES=local-dev` in your `.env` file. Note
+  that this also enables the dev IdP (see above).
+- Mount the `smtp-debug-logs` volume on the web service in your compose
+  override (see `compose.override.example.yml`). If you don't, you won't be
+  able to easily see the captured emails.
 - Set `MAIL_SERVER=smtpdebug` in your `.env` file, and any dummy from / admin
   emails you like.
-- Start the stack with the smtpdebug service, not just web, e.g., `podman
-  compose up -d web smtpdebug`
+- Start the whole stack, not just web (nothing depends on smtpdebug), e.g.,
+  `docker compose up -d`
 - Send an email and view it: any generated emails will be visible under the URL
   path `/.smtp-debug`
 

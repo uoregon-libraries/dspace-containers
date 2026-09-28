@@ -85,6 +85,10 @@ services:
       args:
         MAVEN_FLAGS: ${MAVEN_FLAGS:-}
 
+    secrets:
+      - saml-sp.key
+      - saml-sp.crt
+
     # The env key syntax may look odd, but it is how to override dspace.cfg
     # settings via env variables.
     #
@@ -120,6 +124,20 @@ services:
       embargo__P__field__P__lift: dc.description.embargo
 
       JAVA_OPTS: ${REST_JAVA_OPTS:-}
+
+      plugin__P__sequence__P__org__P__dspace__P__authenticate__P__AuthenticationMethod: >-
+        org.dspace.authenticate.IPAuthentication,
+        org.dspace.authenticate.PasswordAuthentication,
+        org.dspace.authenticate.SamlAuthentication
+      authentication__D__saml__P__relying__D__party__D__id: sso
+      authentication__D__saml__P__autoregister: ${SAML_AUTOREGISTER:-false}
+      authentication__D__ip__P__UO\ Only: ${AUTHENTICATION_IPS:-}
+      saml__D__relying__D__party__P__sso__P__asserting__D__party__P__metadata__D__uri: ${SAML_IDP_METADATA_URI:?SAML_IDP_METADATA_URI must be set}
+      saml__D__relying__D__party__P__sso__P__attributes: ${SAML_ATTRIBUTES:?SAML_ATTRIBUTES must be set}
+      saml__D__relying__D__party__P__sso__P__signing__P__credentials__P__0__P__private__D__key__D__location: file:///run/secrets/saml-sp.key
+      saml__D__relying__D__party__P__sso__P__signing__P__credentials__P__0__P__certificate__D__location: file:///run/secrets/saml-sp.crt
+
+      rest__P__cors__P__allowed__D__origins: ${REST_ALLOWED_ORIGINS:?REST_ALLOWED_ORIGINS must be set}
 
     depends_on:
       - db
@@ -194,6 +212,34 @@ services:
     volumes:
       - tps-data:/var/local/tps/data
 
+  # Local dev only, enable via COMPOSE_PROFILES in `.env`.
+  #
+  # Env values use `:-`, never `:?`, because podman-compose interpolates
+  # services even when their profile is off.
+
+  # Captures outgoing mail instead of sending it. Set MAIL_SERVER=smtpdebug.
+  smtpdebug:
+    build:
+      dockerfile: Dockerfile-smtpdebug
+    profiles: [local-dev]
+    networks:
+      dspacenet: {}
+    volumes:
+      - smtp-debug-logs:/var/local/smtp-debug-logs:rw
+
+  # SAML IdP (go-saml); see "IdP" in README.md. Its entrypoint refuses to
+  # start if the URLs are blank.
+  idp:
+    build:
+      dockerfile: Dockerfile-idp
+    profiles: [local-dev]
+    networks:
+      dspacenet: {}
+    environment:
+      IDP_BASE_URL: ${DEV_IDP_URL:-}
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      DEV_IDP_USERS: ${DEV_IDP_USERS:-}
+
 volumes:
   request-logs: {}
   assetstore: {}
@@ -203,3 +249,10 @@ volumes:
   caddy-conf: {}
   statistics: {}
   cli-logs: {}
+  smtp-debug-logs: {}
+
+secrets:
+  saml-sp.key:
+    file: ${SAML_SP_KEY_FILE:?SAML_SP_KEY_FILE must be set}
+  saml-sp.crt:
+    file: ${SAML_SP_CERT_FILE:?SAML_SP_CERT_FILE must be set}
