@@ -44,11 +44,6 @@ services:
     #  - /location/of/key.key:/run/secrets/test-scholarsbank.key:ro,Z
     #  - /location/of/cert.crt:/run/certs/test-scholarsbank.crt:ro,Z
 
-  # For importing and exporting statistics
-  # cli:
-  #   volumes:
-  #     - ./exports/solr:/usr/local/dspace/solr-export
-
   # Development alternative: run the live-reload dev server instead of the
   # compiled production bundle. The bind mount lets you edit your
   # dspace-angular checkout on the host and see changes without rebuilding;
