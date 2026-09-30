@@ -1,6 +1,6 @@
 FROM docker.io/solr:9.10
 
-COPY conf/solr /var/local/solr-configsets
+COPY --chown=solr:solr conf/solr /var/local/solr-configsets
 ENV SOLR_OPTS="-Dsolr.config.lib.enabled=true"
 
 RUN mkdir -p /var/solr/data
