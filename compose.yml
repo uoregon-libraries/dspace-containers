@@ -145,9 +145,6 @@ services:
     profiles: [tools]
     environment:
       JAVA_OPTS: ${CLI_JAVA_OPTS:-}
-    # For importing and exporting statistics
-    volumes:
-      - ./exports/solr:/usr/local/dspace/solr-export
 
   db:
     build:
