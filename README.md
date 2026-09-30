@@ -173,6 +173,55 @@ For statistics data:
 1. Reindex search index: `docker compose --profile tools run --rm index-discovery -b`
 1. Generate site-wide statistics files: `docker compose --profile tools run --rm update-stats`
 
+### IdP
+
+For dev, we use [go-saml][go-saml-github] (the `idp` service in the `local-dev`
+profile) and a local key pair. Set `COMPOSE_PROFILES=local-dev` and
+`DEV_IDP_URL` (a URL your browser can reach on port 8081) in `.env`, publish
+the port and make `rest` wait for `idp` in your compose override (see
+`compose.override.example.yml`), and start the stack as usual.
+
+On startup the IdP registers the `DEV_IDP_USERS` (default `alice,bob`; each
+user's password is their name), then waits for DSpace and registers it as a
+service provider. Choose the SSO login option in DSpace and sign in as one of
+those users. The first login creates the DSpace account (`SAML_AUTOREGISTER`).
+
+**Note 1**: Browse via `localhost` or HTTPS, not a plain-HTTP IP or hostname
+(e.g., `http://192.168.56.100:8080`). Use an ssh tunnel (see below) if you have
+to request DSpace via IP address or non-https hostname (e.g., running on a VM
+instead of your desktop).
+
+(*Why? DSpace hard-codes the SAML cookie to always be secure. Usually a good
+idea for SAML, but not so great for those of us doing dev on VMs. Browsers
+silently drop `Secure` cookies over plain HTTP everywhere except `localhost`.
+The SAML login works, REST sees authentication, creates user, etc. But the UI
+never sees the cookie.*)
+
+As promised, tunnel help follows. Note that if you tunnel, you must also set
+`PUBLIC_HOST=localhost` in `.env`.
+
+```bash
+ssh -L 8080:localhost:8080 -L 8081:localhost:8081 <vm>
+```
+
+**Note 2**: If new DSpace SAML keys need to be built, you just use `openssl` as
+below, but make sure you use `podman compose down` to stop and remove all
+containers. DSpace only reads the keys on startup, and podman secrets are funky
+as it is.
+
+```bash
+openssl req -x509 -newkey rsa:3072 -nodes -days 3650 \
+  -keyout conf/rest/dev-saml-sp.key -out conf/rest/dev-saml-sp.crt \
+  -subj "/CN=scholarsbank-dev-sp"
+```
+
+**Note 3**: The IdP doesn't support single logout, so to switch users, log out
+of DSpace and then either clear the browser's cookies for the IdP, or restart
+it: `docker compose restart idp`. The IdP keeps everything in memory and
+re-provisions itself when it starts.
+
+[go-saml-github]: <https://github.com/uoregon-libraries/go-saml>
+
 ### Create local admin
 
 You'll probably want a local admin for easier access. Use the `cli` service:
@@ -205,16 +254,17 @@ Finally, start up the stack and browse to `http://localhost:8080`
 
 In dev or staging, you don't want emails being sent by mistake, but you still
 probably want to test out the email-sending capabilities. Enter the `smtpdebug`
-service (seen in the example compose override):
+service (part of the `local-dev` profile):
 
-- Enable the `smtpdebug` service in your compose override
-- Mount the `smtp-debug-logs` volume both in the `smtpdebug` service *and* the
-  web service! If you don't add the volume to `web`, you won't be able to
-  easily see the captured emails.
+- Enable the profile: `COMPOSE_PROFILES=local-dev` in your `.env` file. Note
+  that this also enables the dev IdP (see above).
+- Mount the `smtp-debug-logs` volume on the web service in your compose
+  override (see `compose.override.example.yml`). If you don't, you won't be
+  able to easily see the captured emails.
 - Set `MAIL_SERVER=smtpdebug` in your `.env` file, and any dummy from / admin
   emails you like.
-- Start the stack with the smtpdebug service, not just web, e.g., `podman
-  compose up -d web smtpdebug`
+- Start the whole stack, not just web (nothing depends on smtpdebug), e.g.,
+  `docker compose up -d`
 - Send an email and view it: any generated emails will be visible under the URL
   path `/.smtp-debug`
 

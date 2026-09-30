@@ -1,0 +1,14 @@
+# Dev-only SAML IdP (go-saml). Never run this anywhere real: its signing key is
+# hard-coded in the go-saml source.
+FROM docker.io/golang:1-alpine AS build
+RUN apk add git make
+WORKDIR /app
+RUN git clone -b v1.1.0 https://github.com/uoregon-libraries/go-saml.git .
+RUN make
+
+FROM alpine
+RUN apk add curl
+COPY --from=build /app/bin/idp /usr/local/bin/idp
+COPY conf/idp/entrypoint.sh /usr/local/bin/idp-entrypoint
+ENTRYPOINT ["/usr/local/bin/idp-entrypoint"]
+EXPOSE 8081
