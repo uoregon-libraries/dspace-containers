@@ -129,13 +129,16 @@ services:
         org.dspace.authenticate.IPAuthentication,
         org.dspace.authenticate.PasswordAuthentication,
         org.dspace.authenticate.SamlAuthentication
-      authentication__D__saml__P__relying__D__party__D__id: sso
+      authentication__D__saml__P__relying__D__party__D__id: ${SAML_RELYING_PARTY_ID:?SAML_RELYING_PARTY_ID must be set}
       authentication__D__saml__P__autoregister: ${SAML_AUTOREGISTER:-false}
       authentication__D__ip__P__UO\ Only: ${AUTHENTICATION_IPS:-}
-      saml__D__relying__D__party__P__sso__P__asserting__D__party__P__metadata__D__uri: ${SAML_IDP_METADATA_URI:?SAML_IDP_METADATA_URI must be set}
-      saml__D__relying__D__party__P__sso__P__attributes: ${SAML_ATTRIBUTES:?SAML_ATTRIBUTES must be set}
-      saml__D__relying__D__party__P__sso__P__signing__P__credentials__P__0__P__private__D__key__D__location: file:///run/secrets/saml-sp.key
-      saml__D__relying__D__party__P__sso__P__signing__P__credentials__P__0__P__certificate__D__location: file:///run/secrets/saml-sp.crt
+      # The relying-party ID is part of these keys, and compose can't
+      # interpolate keys, so the REST entrypoint rewrites "X_SAML_<rest>" to
+      # "saml__D__relying__D__party__P__<id>__P__<rest>".
+      X_SAML_asserting__D__party__P__metadata__D__uri: ${SAML_IDP_METADATA_URI:?SAML_IDP_METADATA_URI must be set}
+      X_SAML_attributes: ${SAML_ATTRIBUTES:?SAML_ATTRIBUTES must be set}
+      X_SAML_signing__P__credentials__P__0__P__private__D__key__D__location: file:///run/secrets/saml-sp.key
+      X_SAML_signing__P__credentials__P__0__P__certificate__D__location: file:///run/secrets/saml-sp.crt
 
       rest__P__cors__P__allowed__D__origins: ${REST_ALLOWED_ORIGINS:?REST_ALLOWED_ORIGINS must be set}
 

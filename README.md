@@ -180,6 +180,7 @@ profile) and a local key pair. Set `COMPOSE_PROFILES=local-dev` and
 `DEV_IDP_URL` (a URL your browser can reach on port 8081) in `.env`, publish
 the port and make `rest` wait for `idp` in your compose override (see
 `compose.override.example.yml`), and start the stack as usual.
+`SAML_RELYING_PARTY_ID` must be `sso` for the dev IdP.
 
 On startup the IdP registers the `DEV_IDP_USERS` (default `alice,bob`; each
 user's password is their name), then waits for DSpace and registers it as a

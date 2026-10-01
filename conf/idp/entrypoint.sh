@@ -19,6 +19,7 @@ set -eu
 : "${IDP_BASE_URL:?IDP_BASE_URL must be set}"
 : "${PUBLIC_URL:?PUBLIC_URL must be set}"
 : "${DEV_IDP_USERS:=alice,bob}"
+# "sso" must match SAML_RELYING_PARTY_ID; see .env.example
 sp_metadata_url=http://rest:8080/server/saml2/service-provider-metadata/sso
 
 idp &
