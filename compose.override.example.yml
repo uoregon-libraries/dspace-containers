@@ -20,10 +20,6 @@ services:
       - ./exports/db:/docker-entrypoint-initdb.d/
 
   rest:
-    # Only use this if you need to import solr statistics
-    volumes:
-      - ./exports/solr:/usr/local/dspace/solr-export
-
     # DSpace only reads IdP metadata at startup, so the dev IdP (local-dev
     # profile) must be up first. This lives here rather than in compose.yml
     # because docker compose rejects a dependency on a disabled service.
@@ -37,6 +33,11 @@ services:
   idp:
     ports:
       - 0.0.0.0:8081:8081
+
+  # Only use this if you need to import solr statistics
+  cli:
+    volumes:
+      - ./exports/solr:/usr/local/dspace/solr-export
 
   # Development alternative: run the live-reload dev server instead of the
   # compiled production bundle. The bind mount lets you edit your
