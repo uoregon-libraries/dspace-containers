@@ -3,6 +3,27 @@ set -e
 
 DSPACE=/usr/local/dspace
 
+# The SAML relying-party ID is part of the config *keys* (and is dictated
+# externally per environment), but compose can't interpolate env var names.
+# compose.yml sets them as "X_SAML_<rest>", which we rewrite here to
+# "saml__D__relying__D__party__P__<id>__P__<rest>". (The X_SAML_ prefix maps to
+# nothing DSpace reads, so un-rewritten vars are inert.)
+rpid_prefix=X_SAML_
+rpid="${authentication__D__saml__P__relying__D__party__D__id:-}"
+if [ -n "$rpid" ]; then
+  if [[ ! "$rpid" =~ ^[A-Za-z0-9_-]+$ ]]; then
+    echo "$0: invalid SAML relying-party ID: '$rpid'" >&2
+    exit 1
+  fi
+  # Env var names can't contain "-", so use DSpace's encoding for it
+  rpid_enc="${rpid//-/__D__}"
+  for var in $(compgen -e); do
+    [[ $var == "$rpid_prefix"* ]] || continue
+    export "saml__D__relying__D__party__P__${rpid_enc}__P__${var#"$rpid_prefix"}=${!var}"
+    unset "$var"
+  done
+fi
+
 run_init() {
   for f in /docker-entrypoint/*; do
     case "$f" in
