@@ -147,6 +147,9 @@ services:
       - solr
     networks:
       dspacenet: {}
+    # This is certainly far more volumes than necessary, but it's not obvious
+    # what we definitely will never use, and a container restart shouldn't
+    # wreck workflows...
     volumes:
       - assetstore:/usr/local/dspace/assetstore
       - statistics:/usr/local/dspace/statistics
