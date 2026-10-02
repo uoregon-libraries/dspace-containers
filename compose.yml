@@ -176,6 +176,32 @@ services:
     environment:
       JAVA_OPTS: ${CLI_JAVA_OPTS:-}
 
+  # Handle server: answers hdl.handle.net lookups for our prefix from the
+  # DSpace database. Production only; enable via COMPOSE_PROFILES in `.env`.
+  # It needs one-time setup and registration with handle.net, so read
+  # docs/handle-server.md before turning it on.
+  #
+  # Env values use `:-`, never `:?`: podman-compose interpolates services even
+  # when their profile is off.
+  handle:
+    extends:
+      service: rest
+    profiles: [handle]
+    command: ["/usr/local/scripts/handle-server.sh"]
+    depends_on:
+      - db
+    environment:
+      JAVA_OPTS: ${HANDLE_JAVA_OPTS:--Xmx256m}
+    # Unlike everything else, this is published directly rather than via
+    # Caddy: it isn't HTTP-only, and the ports are fixed by what's registered
+    # with handle.net, not by environment.
+    ports:
+      - 2641:2641/tcp
+      - 2641:2641/udp
+      - 8000:8000/tcp
+    volumes:
+      - handle-server:/usr/local/dspace/handle-server
+
   db:
     build:
       dockerfile: Dockerfile-pgsql
@@ -268,6 +294,7 @@ volumes:
   imports: {}
   reports: {}
   smtp-debug-logs: {}
+  handle-server: {}
 
 secrets:
   saml-sp.key:
