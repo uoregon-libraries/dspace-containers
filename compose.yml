@@ -150,6 +150,12 @@ services:
     volumes:
       - assetstore:/usr/local/dspace/assetstore
       - statistics:/usr/local/dspace/statistics
+      - sitemaps:/usr/local/dspace/sitemaps
+      - oai-cache:/usr/local/dspace/var/oai
+      - curation-queues:/usr/local/dspace/ctqueues
+      - exports:/usr/local/dspace/exports
+      - imports:/usr/local/dspace/imports
+      - reports:/usr/local/dspace/reports
       # Tomcat won't write logs here, but we mount it here since "cli" inherits
       # this setting, and then we catch any one-offs accidentally run against
       # the "rest" service
@@ -252,6 +258,12 @@ volumes:
   caddy-conf: {}
   statistics: {}
   cli-logs: {}
+  sitemaps: {}
+  oai-cache: {}
+  curation-queues: {}
+  exports: {}
+  imports: {}
+  reports: {}
   smtp-debug-logs: {}
 
 secrets:
