@@ -36,14 +36,16 @@ running cron jobs and any other short-lived commands in a CLI-optimized
 container:
 
 ```bash
-docker compose --profile tools run --rm cli <command>
+docker compose --profile tools run --rm --no-deps cli <command>
 ```
 
 Notes:
 
 - Yes, this is unweildy, but it ensures the `cli` container never starts up
   with other services
-  - A bash alias can help: `alias dspace-cli='docker compose --profile tools run --rm cli'`
+  - A bash alias can help: `alias dspace-cli='docker compose --profile tools run --rm --no-deps cli'`
+- **Never drop `--no-deps`**. Without it, every command, even a simple `ls`,
+  will restart the entire stack!
 - The image adds `/usr/local/dspace/bin` to `$PATH` so that any commands there
   can be specified without a full path, which hopefully makes it slightly less
   unweildy.
@@ -156,7 +158,7 @@ export from production and import it locally:
 1. *Remove* your current database volume, e.g., `docker volume rm dspace_db`
 1. Start the stack up again, and postgres will import the SQL fairly quickly
    (faster than the angular side boots up)
-1. Reindex: `docker compose --profile tools run --rm cli index-discovery -b`
+1. Reindex: `docker compose --profile tools run --rm --no-deps cli index-discovery -b`
 1. Note: if you aren't mirroring bitstreams, you will see a *lot* of errors
    while DSpace tries and fails to index full-text data from PDFs and other
    documents. You can safely ignore these.
@@ -169,9 +171,9 @@ For statistics data:
    that adds a volume: `./exports/solr:/usr/local/dspace/solr-export`
 1. *Remove* your current solr volume, e.g., `docker volume rm dspace_solr`
 1. Restart the stack
-1. Import statistics index: `docker compose --profile tools run --rm solr-import-statistics`
-1. Reindex search index: `docker compose --profile tools run --rm index-discovery -b`
-1. Generate site-wide statistics files: `docker compose --profile tools run --rm update-stats`
+1. Import statistics index: `docker compose --profile tools run --rm --no-deps cli solr-import-statistics`
+1. Reindex search index: `docker compose --profile tools run --rm --no-deps cli index-discovery -b`
+1. Generate site-wide statistics files: `docker compose --profile tools run --rm --no-deps cli update-stats`
 
 ### IdP
 
@@ -228,7 +230,7 @@ re-provisions itself when it starts.
 You'll probably want a local admin for easier access. Use the `cli` service:
 
 ```bash
-docker compose --profile tools run --rm cli create-administrator -e admin@example.org -p adm -f Ad -l Min
+docker compose --profile tools run --rm --no-deps cli create-administrator -e admin@example.org -p adm -f Ad -l Min
 ```
 
 ### Configure
