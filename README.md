@@ -76,21 +76,37 @@ High-level info:
 Probably only for production. Dev definitely doesn't need cron jobs, and
 staging *probably* doesn't.
 
-1. Set `CRON_MAILTO` in `.env` to where job failures should be emailed
 1. Build the renderer: `make bin/render-crontab`. This needs Go, but the
    result is a static binary, so you can build it elsewhere and copy it to
    `bin/` on the server.
-1. As the podman user, from the project dir, render and install the crontab
-   file (see below). Always render to a file first; if rendering fails, it
-   prints nothing.
-1. You *must* rerender if you change `conf/crontab` or `CRON_MAILTO`, move the
-   project to a new dir, or move `podman-compose`
+1. Render the crontab to a file (see below). Always render to a file first; if
+   rendering fails, it prints nothing.
+1. Install the file on the server
+1. You *must* rerender if you change `conf/crontab`, the mail address, the
+   podman user, or move the project or `podman-compose` on the server
 
-To set up a system crontab:
+The renderer takes everything about *the production server* as flags:
+
+- `-dir` (required): absolute path the project is deployed
+- `-user` (required): the podman user the jobs run as (use `-user ""` to render
+  a user crontab instead of a system crontab)
+- `-mailto` (required): where cron emails job failures (use `-mailto ""` to
+  leave MAILTO out of the file)
+- `-compose-dir` (optional): the directory holding `podman-compose` on
+  production; unnecessary if it's in `/usr/local/bin`, `/usr/bin`, or `/bin`
+
+e.g.:
 
 ```bash
-bin/render-crontab -user "$(whoami)" > /tmp/sb.cron
-sudo install -m 644 -o root -g root /tmp/sb.cron /etc/cron.d/scholarsbank
+bin/render-crontab -dir /srv/scholarsbank -user dspace \
+  -mailto dspace-admins@example.org -compose-dir /home/dspace/.local/bin \
+  > sb.cron
+```
+
+Then copy `sb.cron` to the server and install it:
+
+```bash
+sudo install -m 644 -o root -g root sb.cron /etc/cron.d/scholarsbank
 ```
 
 The file must be owned by root and not group- or world-writable
@@ -110,7 +126,7 @@ Notes about this wrapper:
 - It runs compose from the project root; podman compose needs this to load `.env`
   and `compose.override.yml`
 - A successful job prints nothing while a failed job prints its output and exit
-  status, which cron emails to `CRON_MAILTO`
+  status, which cron emails to the renderer's `-mailto` address
 - If the same command is still running from its last scheduled run, the new
   run is skipped and reported as a failure
 - Jobs never start dependencies - if the stack is down, they will fail (no db,
@@ -140,7 +156,8 @@ If you edit `conf/crontab`, a few things to keep in mind:
 The renderer refuses to print anything if a schedule is malformed (e.g., a
 missing field) or a command has host-shell syntax (`;`, `&`, `|`, redirects,
 `$`, a bare `%`, ...) outside of quotes. Run it after editing to check your
-work: `bin/render-crontab > /dev/null`.
+work: `bin/render-crontab -dir /x -user x -mailto "" > /dev/null` (the
+flag values don't matter just to test rendering's success).
 
 ## Dev / test / staging
 
