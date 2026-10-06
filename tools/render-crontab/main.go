@@ -2,13 +2,20 @@
 // stub of sorts, and this script's job is to fill in the path to the project,
 // MAILTO, user to run cron as, full path to the cron running script, etc.
 //
+// It reads conf/crontab from the current directory, but everything it fills
+// in comes from flags, never the local machine, so a crontab can be rendered
+// on a workstation and shipped to a server with different users and paths.
+//
 // It also rejects mistakes cron would otherwise act on silently: malformed
 // schedules, and commands with syntax the *host's* shell would handle (";",
 // pipes, redirects, "$", etc.) instead of passing it along to the container.
 //
 // Usage:
 //
-//     render-crontab [-dir <project dir>] [-user <user>]
+//     render-crontab -dir <project dir> -user <user> -mailto <address> [-compose-dir <dir>]
+//
+// -dir, -user, and -mailto are required, but -user and -mailto may be
+// explicitly empty: -user "" renders a user crontab, -mailto "" omits MAILTO.
 
 package main
 
@@ -19,24 +26,29 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
 )
 
 // options holds everything render needs besides the schedule itself
 type options struct {
-	projectDir string // absolute path of the checkout
+	projectDir string // absolute path of the checkout on the target machine
 	user       string // run-as user for a system crontab; empty for a user crontab
 	path       string // PATH for the jobs
 	mailto     string // may be empty
 }
 
+// systemPath is where cron looks for podman-compose unless -compose-dir says
+// otherwise
+const systemPath = "/usr/local/bin:/usr/bin:/bin"
+
 func main() {
-	dir := flag.String("dir", ".", "the project checkout the jobs will run in")
-	user := flag.String("user", "", "render a system crontab (e.g., for /etc/cron.d) whose jobs run as this user;\nomit to render a user crontab (e.g., for \"crontab -e\")")
+	dir := flag.String("dir", "", "required: absolute path of the project checkout on the machine that will run the jobs")
+	user := flag.String("user", "", "required: render a system crontab (e.g., for /etc/cron.d) whose jobs run as this user;\nuse -user \"\" to render a user crontab (e.g., for \"crontab -e\")")
+	mailto := flag.String("mailto", "", "required: where cron mails failed jobs; use -mailto \"\" to leave MAILTO out\n(cron then mails the local account running the jobs)")
+	composeDir := flag.String("compose-dir", "", "absolute path of the directory holding podman-compose on the machine that will run the jobs,\nif it isn't in "+systemPath)
 	flag.Parse()
 	if flag.NArg() > 0 {
 		flag.Usage()
@@ -49,14 +61,21 @@ func main() {
 		problems = append(problems, fmt.Sprintf(format, args...))
 	}
 
-	var err error
-	opts.projectDir, err = filepath.Abs(*dir)
-	if err != nil {
-		complain("%s", err)
+	// "Required" means given at all, even if empty, so nobody gets a user
+	// crontab or a MAILTO-less one by accident
+	given := make(map[string]bool)
+	flag.Visit(func(f *flag.Flag) { given[f.Name] = true })
+	for _, name := range []string{"dir", "user", "mailto"} {
+		if !given[name] {
+			complain("-%s is required", name)
+		}
 	}
-	// The path ends up unquoted in a shell command line, so keep it boring
-	if !safePath.MatchString(opts.projectDir) {
-		complain("project dir %q may only contain letters, digits, and /._-", opts.projectDir)
+
+	// The project dir is on another machine, so it can't be checked beyond its
+	// shape. It ends up unquoted in a shell command line, so keep it boring.
+	opts.projectDir = *dir
+	if given["dir"] {
+		checkDir(complain, "-dir", opts.projectDir)
 	}
 
 	opts.user = *user
@@ -64,30 +83,25 @@ func main() {
 		complain("%q doesn't look like a user name", opts.user)
 	}
 
-	runner := filepath.Join(opts.projectDir, "scripts", "cron-job")
-	if info, err := os.Stat(runner); err != nil {
-		complain("%s", err)
-	} else if info.Mode()&0111 == 0 {
-		complain("%s isn't executable", runner)
+	// A newline here would let MAILTO inject lines into the crontab
+	opts.mailto = *mailto
+	if strings.ContainsFunc(opts.mailto, func(r rune) bool { return r <= ' ' || r == 0x7f }) {
+		complain("-mailto %q may not contain spaces or control characters", opts.mailto)
 	}
 
-	opts.path, err = cronPath()
-	if err != nil {
-		complain("%s", err)
-	}
-
-	opts.mailto, err = readMailto(filepath.Join(opts.projectDir, ".env"))
-	if err != nil {
-		complain("%s", err)
+	opts.path = systemPath
+	if *composeDir != "" {
+		checkDir(complain, "-compose-dir", *composeDir)
+		opts.path = *composeDir + ":" + systemPath
 	}
 
 	// Check the schedule even if something above failed, so one run reports
 	// everything that needs fixing
 	var out string
-	schedulePath := filepath.Join(opts.projectDir, "conf", "crontab")
+	schedulePath := filepath.Join("conf", "crontab")
 	schedule, err := os.ReadFile(schedulePath)
 	if err != nil {
-		complain("%s (run this from the project directory, or use -dir)", err)
+		complain("%s (run this from the project directory)", err)
 	} else {
 		var errs []error
 		out, errs = render(schedule, opts)
@@ -103,9 +117,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if opts.mailto == "" {
-		fmt.Fprintln(os.Stderr, "render-crontab: warning: CRON_MAILTO isn't set in .env, so cron will mail failures to the local account running the jobs")
-	}
 	fmt.Print(out)
 }
 
@@ -115,50 +126,18 @@ var (
 	envVar   = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*\s*=`)
 )
 
-// cronPath returns a PATH for the jobs: the usual system dirs, plus wherever
-// podman-compose is installed if that's somewhere else (e.g., ~/.local/bin)
-func cronPath() (string, error) {
-	dirs := []string{"/usr/local/bin", "/usr/bin", "/bin"}
-	compose, err := exec.LookPath("podman-compose")
-	if err != nil {
-		return "", errors.New("podman-compose isn't on your PATH")
+// checkDir complains unless dir is a clean absolute path that's safe to put
+// in a crontab unquoted. It may name a directory on another machine, so it's
+// never looked up.
+func checkDir(complain func(string, ...any), flagName, dir string) {
+	switch {
+	case !safePath.MatchString(dir):
+		complain("%s %q may only contain letters, digits, and /._-", flagName, dir)
+	case !path.IsAbs(dir):
+		complain("%s %q must be an absolute path", flagName, dir)
+	case path.Clean(dir) != dir:
+		complain("%s %q should be written as %q", flagName, dir, path.Clean(dir))
 	}
-	if composeDir := filepath.Dir(compose); !slices.Contains(dirs, composeDir) {
-		dirs = append([]string{composeDir}, dirs...)
-	}
-	return strings.Join(dirs, ":"), nil
-}
-
-// readMailto returns CRON_MAILTO from the given .env file, or "" if the file
-// or the setting is missing. .env belongs to compose, which supports quoting
-// and ${VAR} interpolation; we only accept a plain value (optionally quoted)
-// rather than half-implement compose's rules.
-func readMailto(envFile string) (string, error) {
-	data, err := os.ReadFile(envFile)
-	if errors.Is(err, os.ErrNotExist) {
-		return "", nil
-	}
-	if err != nil {
-		return "", err
-	}
-
-	// Like compose, the last assignment wins
-	var val string
-	for line := range strings.SplitSeq(string(data), "\n") {
-		if v, ok := strings.CutPrefix(line, "CRON_MAILTO="); ok {
-			val = strings.TrimSpace(v)
-		}
-	}
-	for _, q := range []string{`"`, `'`} {
-		if len(val) >= 2 && strings.HasPrefix(val, q) && strings.HasSuffix(val, q) {
-			val = val[1 : len(val)-1]
-		}
-	}
-
-	if strings.ContainsAny(val, "$ \t") {
-		return "", fmt.Errorf("CRON_MAILTO in %s must be a plain value: no ${...} or spaces (or trailing comments)", envFile)
-	}
-	return val, nil
 }
 
 // render builds the crontab from the schedule file's contents. Problems are
@@ -191,7 +170,7 @@ func render(schedule []byte, opts options) (string, []error) {
 	}
 	out.WriteString("\n")
 
-	runner := filepath.Join(opts.projectDir, "scripts", "cron-job")
+	runner := path.Join(opts.projectDir, "scripts", "cron-job")
 	// The header is the leading comment block plus the blank lines after it;
 	// the first comment after that gap belongs to the schedule
 	inHeader, pastHeaderComments := true, false

@@ -1,8 +1,7 @@
 package main
 
 import (
-	"os"
-	"path/filepath"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -124,48 +123,35 @@ func TestRender(t *testing.T) {
 	})
 }
 
-func TestReadMailto(t *testing.T) {
+func TestCheckDir(t *testing.T) {
 	var tests = map[string]struct {
-		env     string
-		want    string
-		wantErr bool
+		dir     string
+		wantErr string
 	}{
-		"plain":         {env: "FOO=1\nCRON_MAILTO=ops@example.org\n", want: "ops@example.org"},
-		"double quoted": {env: `CRON_MAILTO="ops@example.org"`, want: "ops@example.org"},
-		"single quoted": {env: `CRON_MAILTO='ops@example.org'`, want: "ops@example.org"},
-		"last wins":     {env: "CRON_MAILTO=a@example.org\nCRON_MAILTO=b@example.org\n", want: "b@example.org"},
-		"commented out": {env: "#CRON_MAILTO=ops@example.org\n", want: ""},
-		"unset":         {env: "FOO=1\n", want: ""},
-		"interpolated":  {env: "CRON_MAILTO=${MAIL_ADMIN}\n", wantErr: true},
-		"trailing note": {env: "CRON_MAILTO=ops@example.org # the ops list\n", wantErr: true},
+		"absolute":       {dir: "/srv/scholarsbank"},
+		"relative":       {dir: "scholarsbank", wantErr: "absolute"},
+		"dot":            {dir: ".", wantErr: "absolute"},
+		"trailing slash": {dir: "/srv/sb/", wantErr: `"/srv/sb"`},
+		"dot-dot":        {dir: "/srv/x/../sb", wantErr: `"/srv/sb"`},
+		"space":          {dir: "/srv/my sb", wantErr: "only contain"},
+		"empty":          {dir: "", wantErr: "only contain"},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			var envFile = filepath.Join(t.TempDir(), ".env")
-			if err := os.WriteFile(envFile, []byte(tc.env), 0644); err != nil {
-				t.Fatal(err)
-			}
-			var got, err = readMailto(envFile)
-			if tc.wantErr {
-				if err == nil {
-					t.Fatalf("want an error, got %q", got)
+			var problems []string
+			checkDir(func(format string, args ...any) {
+				problems = append(problems, fmt.Sprintf(format, args...))
+			}, "-dir", tc.dir)
+			if tc.wantErr == "" {
+				if len(problems) > 0 {
+					t.Fatalf("unexpected problems: %v", problems)
 				}
 				return
 			}
-			if err != nil {
-				t.Fatalf("unexpected error: %s", err)
-			}
-			if got != tc.want {
-				t.Fatalf("got %q, want %q", got, tc.want)
+			if len(problems) != 1 || !strings.Contains(problems[0], tc.wantErr) {
+				t.Fatalf("want one problem containing %q, got %v", tc.wantErr, problems)
 			}
 		})
 	}
-
-	t.Run("no .env", func(t *testing.T) {
-		var got, err = readMailto(filepath.Join(t.TempDir(), ".env"))
-		if got != "" || err != nil {
-			t.Fatalf("got (%q, %v), want (\"\", nil)", got, err)
-		}
-	})
 }
