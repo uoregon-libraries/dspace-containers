@@ -94,5 +94,10 @@
 # Custom tasks not in DSpace core
 #---------------------------------
 
+# Regenerate the site-wide statistics JSON files every 4 hours (bin/update-stats
+# in dspace-rest). This queries Solr directly; see SOLR_HEAP in .env.example if
+# Solr struggles with it.
+40 */4 * * *  update-stats
+
 # Remove CLI job logs older than 30 days (see "CLI / cron jobs / one-offs" in README.md)
 30 4 * * *  find /usr/local/dspace/log -type f -mtime +30 -delete
