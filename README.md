@@ -10,8 +10,8 @@ To use this, you must first check out a copy of both the REST and Angular
 projects. In our case, it looks a bit like this:
 
 ```bash
-git checkout git@github.com:uoregon-libraries/scholarsbank-angular.git ./dspace-angular
-git checkout git@github.com:uoregon-libraries/scholarsbank-rest.git ./dspace-rest
+git clone git@github.com:uoregon-libraries/scholarsbank-angular.git ./dspace-angular
+git clone git@github.com:uoregon-libraries/scholarsbank-rest.git ./dspace-rest
 ```
 
 **Note**: on each image build (e.g., `docker compose build`), you will be
