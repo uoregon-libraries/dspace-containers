@@ -191,6 +191,8 @@ services:
   solr:
     build:
       dockerfile: Dockerfile-solr
+    environment:
+      SOLR_HEAP: ${SOLR_HEAP:-}
     networks:
       dspacenet:
     volumes:
