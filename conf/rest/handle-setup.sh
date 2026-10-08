@@ -11,8 +11,7 @@
 # - The setup tool's output isn't hidden, so errors are visible.
 #
 # Existing keys in the handle dir are kept, so this is also how to move an
-# existing handle server to a new IP. See handle-server.md in the server
-# documentation repo.
+# existing handle server to a new IP. See docs/handle-server.md.
 set -eu
 
 DSPACE=/usr/local/dspace

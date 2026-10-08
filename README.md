@@ -62,7 +62,8 @@ Notes:
 
 Production needs a handle server so `hdl.handle.net/1794/...` links resolve.
 It's the `handle` service (off unless its profile is enabled), and it needs
-one-time setup plus registration with handle.net: see our server-docs repo's
+one-time setup plus registration with handle.net: see
+[docs/handle-server.md](docs/handle-server.md), and our server-docs repo's
 "handle server" documentation for internal details.
 
 ## Scheduled jobs

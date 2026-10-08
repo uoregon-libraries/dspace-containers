@@ -4,7 +4,7 @@
 # DSpace's bin/start-handle-server minus the nohup/backgrounding (which would
 # make the container exit) and the file-only logging.
 #
-# See handle-server.md in the server documentation repo.
+# See docs/handle-server.md.
 set -eu
 
 DSPACE=/usr/local/dspace
