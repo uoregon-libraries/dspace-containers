@@ -74,6 +74,16 @@ volumes:
   #    o: bind
   #    device: ${PWD}/DEV-VOLS/caddy-conf.d
 
+  # Production: keep the handle server's config and private keys in a host
+  # directory, so they're easy to seed, inspect, and back up. See
+  # docs/handle-server.md.
+  #handle-server:
+  #  driver: local
+  #  driver_opts:
+  #    type: none
+  #    o: bind
+  #    device: /opt/dspace/handle-server
+
   # Same idea if you want DSpace's CLI logs on the host:
   #cli-logs:
   #  driver: local

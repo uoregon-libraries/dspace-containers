@@ -58,6 +58,14 @@ Notes:
   `index-discovery_2026-09-24_030000.log`. Mount them on the host or use the
   `cli` service to read them (e.g., via an in-container `tail` or `cat`)
 
+## Handle server
+
+Production needs a handle server so `hdl.handle.net/1794/...` links resolve.
+It's the `handle` service (off unless its profile is enabled), and it needs
+one-time setup plus registration with handle.net: see
+[docs/handle-server.md](docs/handle-server.md), and our server-docs repo's
+"handle server" documentation for internal details.
+
 ## Scheduled jobs
 
 Compose makes cron hard, and DSpace needs a *lot* of cron love. We had to put
