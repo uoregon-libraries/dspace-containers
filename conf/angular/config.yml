@@ -12,3 +12,10 @@ themes:
           href: assets/custom/images/favicons/favicon-32x32.png
           type: image/png
           sizes: 32x32
+
+# Languages DSpace is available in. Must explicitly state an active language to 
+# disable other languages
+languages:
+  - code: en
+    label: English
+    active: true
