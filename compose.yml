@@ -131,7 +131,9 @@ services:
       embargo__P__field__P__terms: dc.description.embargo
       embargo__P__field__P__lift: dc.description.embargo
 
-      JAVA_OPTS: ${REST_JAVA_OPTS:-}
+      # A Java heap OOM leaves Tomcat running but broken, so make the JVM exit
+      # and let the restart policy bring it back
+      JAVA_OPTS: -XX:+ExitOnOutOfMemoryError ${REST_JAVA_OPTS:-}
 
       plugin__P__sequence__P__org__P__dspace__P__authenticate__P__AuthenticationMethod: >-
         org.dspace.authenticate.IPAuthentication,
@@ -182,7 +184,9 @@ services:
       service: rest
     profiles: [tools]
     environment:
-      JAVA_OPTS: ${CLI_JAVA_OPTS:-}
+      # Fail fast on OOM rather than hang. Setting anything here disables
+      # bin/dspace's default JAVA_OPTS, so we keep its UTF-8 encoding.
+      JAVA_OPTS: -XX:+ExitOnOutOfMemoryError -Dfile.encoding=UTF-8 ${CLI_JAVA_OPTS:-}
 
   db:
     restart: always
