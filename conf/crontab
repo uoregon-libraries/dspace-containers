@@ -99,5 +99,9 @@
 # Solr struggles with it.
 40 */4 * * *  update-stats
 
-# Remove CLI job logs older than 30 days (see "CLI / cron jobs / one-offs" in README.md)
-30 4 * * *  find /usr/local/dspace/log -type f -mtime +30 -delete
+# CLI job logs (see "CLI / cron jobs / one-offs" in README.md): each run writes
+# its own file, so instead of rotating, compress them once they're 2+ days old
+# and delete them after a year. gzip keeps the original mtime on the .gz, so
+# the age check still counts from when the job ran.
+30 4 * * *  find /usr/local/dspace/log -type f -mtime +365 -delete
+35 4 * * *  find /usr/local/dspace/log -type f -name '*.log' -mtime +1 -exec gzip -- {} +
