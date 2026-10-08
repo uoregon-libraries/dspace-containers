@@ -3,8 +3,7 @@
 Production only. Local dev doesn't need it, and the `handle` service stays off
 unless its compose profile is enabled.
 
-Site-specific details (addresses, contacts, migration history) belong in your
-own internal documentation; this covers how the pieces fit together.
+Site-specific details live in our internal server documentation repo.
 
 ## What it is, and why you need it
 
@@ -13,14 +12,13 @@ Every DSpace item, collection, and community has a handle, e.g.
 `https://hdl.handle.net/<prefix>/12345` rather than to your hostname, so the
 links survive hostname and server changes.
 
-`hdl.handle.net` doesn't know where your items live. It resolves a handle like
-this:
+`hdl.handle.net` doesn't know where items live. Handle resolution:
 
 1. It asks the **global handle registry** who serves your prefix. That's the
    record `0.NA/<prefix>`, which lists an IP address, ports, and a public key.
-2. It asks the **handle server at that IP**, over the handle protocol on port
-   2641 (TCP/UDP) or HTTP on port 8000.
-3. That server looks the handle up in the **DSpace database**, using DSpace's
+2. It asks the **handle server at that IP** (i.e., the DSpace handle server),
+   over the handle protocol on port 2641 (TCP/UDP) or HTTP on port 8000.
+3. The handle server looks the handle up in the DSpace database, using DSpace's
    `HandlePlugin`, and answers with `<dspace.ui.url>/handle/<prefix>/12345`.
 4. `hdl.handle.net` redirects the browser there.
 
@@ -28,13 +26,14 @@ So the registry must point at a handle server that is running, reachable, and
 attached to your current DSpace database. If the registered server goes away,
 **every handle link breaks**.
 
-The handle server doesn't go through Caddy. It speaks its own protocol and must
-be reachable from the internet directly at the registered IP.
+The handle server doesn't go through any HTTP proxy (SB's Caddy server,
+external HAProxy, etc.). It speaks its own protocol and must be reachable from
+the internet directly at the registered IP.
 
 You can see your registry record at any time:
 
 ```bash
-curl -s https://hdl.handle.net/api/handles/0.NA/<prefix> | python3 -m json.tool
+curl -s https://hdl.handle.net/api/handles/0.NA/<prefix> | jq
 ```
 
 ## What's in this repo
@@ -47,11 +46,11 @@ curl -s https://hdl.handle.net/api/handles/0.NA/<prefix> | python3 -m json.tool
 - `conf/rest/handle-setup.sh`, a variant of DSpace's `make-handle-config` that
   generates or refreshes the config and `sitebndl.zip`, the file handle.net
   needs. It takes the public IP as an argument (a DNS lookup of the site's
-  hostname would find your proxy, not this server) and keeps any existing
-  keys.
+  hostname would find external proxies, not the internal server) and keeps any
+  existing keys.
 
-The handle server refuses to start if the volume hasn't been set up, rather
-than silently generating keys that handle.net doesn't know about.
+The "handle" compose service refuses to start if the volume hasn't been set up,
+rather than silently generating keys that handle.net doesn't know about.
 
 ## One-time setup
 
