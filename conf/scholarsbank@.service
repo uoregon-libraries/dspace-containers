@@ -16,9 +16,11 @@ WorkingDirectory=%f
 # podman compose hands off to podman-compose, which is often a pip/pipx
 # install in ~/.local/bin, not on a user manager's default PATH
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
-# No service names: COMPOSE_PROFILES in .env decides what runs (e.g., handle)
-ExecStart=/usr/bin/podman compose up
-ExecStop=/usr/bin/podman compose down
+# No service names: COMPOSE_PROFILES in .env decides what runs (e.g., handle).
+# scripts/compose turns it into --profile flags, since older podman-compose
+# versions ignore it.
+ExecStart=%f/scripts/compose up
+ExecStop=%f/scripts/compose down
 TimeoutStartSec=0
 Restart=always
 RestartSec=10
