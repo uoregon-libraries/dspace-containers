@@ -127,8 +127,10 @@ Notes:
   changing the unit in the repo, copy it again and `daemon-reload`.
 - `systemctl --user` needs the user's session bus. `ssh` in as the user, don't
   `sudo` to switch users. It gets messy.
-- The unit runs `podman compose up web`, which starts `web` and what it
-  depends on. Services outside that tree, like `handle`, aren't started by it.
+- The unit runs a bare `podman compose up`, so it starts every service in the
+  profiles `COMPOSE_PROFILES` enables, e.g., `handle` once that profile is on.
+  To add a service to a running stack without restarting the site, enable its
+  profile and run `podman compose up -d <service>`.
 
 ## Handle server
 

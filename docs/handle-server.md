@@ -116,6 +116,9 @@ to whatever `PUBLIC_URL` is set to, such as a test site.
 
 Handles that don't exist return `"responseCode":100` (not found). That's fine.
 
+With `handle` in `COMPOSE_PROFILES`, the systemd unit (see "Running under
+systemd" in README.md) starts it along with everything else from here on.
+
 ### 6. Register with handle.net
 
 A prefix's admin key can only add or delete handles under that prefix; it
