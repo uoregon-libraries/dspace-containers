@@ -127,10 +127,14 @@ Notes:
   changing the unit in the repo, copy it again and `daemon-reload`.
 - `systemctl --user` needs the user's session bus. `ssh` in as the user, don't
   `sudo` to switch users. It gets messy.
-- The unit runs a bare `podman compose up`, so it starts every service in the
+- The unit runs `scripts/compose up`, so it starts every service in the
   profiles `COMPOSE_PROFILES` enables, e.g., `handle` once that profile is on.
-  To add a service to a running stack without restarting the site, enable its
-  profile and run `podman compose up -d <service>`.
+  `scripts/compose` is `podman compose` with `COMPOSE_PROFILES` passed as
+  `--profile` flags, because podman-compose before 1.6.0 (such as a distro
+  package) silently ignores it. Use it instead of a bare `podman compose`
+  anywhere profiled services matter (`down`, `ps`, `logs`, ...).
+- To add a service to a running stack without restarting the site, enable its
+  profile and run `scripts/compose up -d <service>`.
 
 ## Handle server
 

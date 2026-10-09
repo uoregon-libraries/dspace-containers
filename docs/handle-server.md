@@ -117,7 +117,9 @@ to whatever `PUBLIC_URL` is set to, such as a test site.
 Handles that don't exist return `"responseCode":100` (not found). That's fine.
 
 With `handle` in `COMPOSE_PROFILES`, the systemd unit (see "Running under
-systemd" in README.md) starts it along with everything else from here on.
+systemd" in README.md) starts it along with everything else from here on. For
+manual commands, use `scripts/compose` (or pass `--profile handle`): some
+podman-compose versions ignore `COMPOSE_PROFILES`.
 
 ### 6. Register with handle.net
 
