@@ -17,7 +17,7 @@ services:
   # Only use this if you have a DB dump you want to import
   db:
     volumes:
-      - ./exports/db:/docker-entrypoint-initdb.d/
+      - /path/to/prod-exports/db:/docker-entrypoint-initdb.d/
 
   rest:
     # DSpace only reads IdP metadata at startup, so the dev IdP (local-dev
@@ -37,7 +37,7 @@ services:
   # Only use this if you need to import solr statistics
   cli:
     volumes:
-      - ./exports/solr:/usr/local/dspace/solr-export
+      - /path/to/prod-exports/solr:/usr/local/dspace/solr-export
 
   # Development alternative: run the live-reload dev server instead of the
   # compiled production bundle. The bind mount lets you edit your
