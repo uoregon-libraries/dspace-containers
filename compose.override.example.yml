@@ -67,6 +67,10 @@ volumes:
   # NOTE: this is still a bind mount, so you have to create the directory
   # manually, and podman won't delete the contents when you remove the volume.
   #
+  # Production: use an absolute path, e.g.
+  # /path/to/scholarsbank/volumes/caddy-conf (see "Production host layout" in
+  # README.md).
+  #
   #caddy-conf:
   #  driver: local
   #  driver_opts:
@@ -82,7 +86,7 @@ volumes:
   #  driver_opts:
   #    type: none
   #    o: bind
-  #    device: /opt/dspace/handle-server
+  #    device: /path/to/scholarsbank/volumes/handle-server
 
   # Same idea if you want DSpace's CLI logs on the host:
   #cli-logs:

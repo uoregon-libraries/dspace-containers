@@ -14,11 +14,13 @@ fi
 # Change to project dir so compose works properly
 cd "$(dirname "$0")/.." || exit 1
 
-# One lock per distinct command line, per project
-project=$(basename "$PWD")
+# One lock per distinct command line, per install. Installs are told apart by
+# their full path, not the directory name: side-by-side installs are often all
+# checked out to ".../app", and compose can't tell us its project name.
+install=$(printf '%s' "$PWD" | tr -c 'A-Za-z0-9._-' '_')
 key=$(printf '%s' "$*" | tr -c 'A-Za-z0-9._-' '_')
 lockdir=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
-exec 9>"$lockdir/$project-cron-$key.lock" || exit 1
+exec 9>"$lockdir/cron$install-$key.lock" || exit 1
 if ! flock -n 9; then
   echo "$*: skipped; the previous run is still going"
   exit 1

@@ -27,7 +27,7 @@ Production should back the volume with a host directory (see
 
 ```bash
 # Create / edit a rule
-$EDITOR /var/local/dspace/caddy-conf.d/00-my-rule.site.caddyfile
+$EDITOR /path/to/scholarsbank/volumes/caddy-conf/00-my-rule.site.caddyfile
 
 # Make sure Caddy config validates, then restart it
 podman compose exec web caddy validate --config /etc/caddy/Caddyfile
