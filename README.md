@@ -81,7 +81,7 @@ together some weird magic to make it work in a semi-nice way. See
 ## Backups
 
 DSpace is a bit complex where backups are concerned, so we have two custom
-scripts for doing backups. See [docs/backup.md](docs/backup.md) for details.
+scripts for doing backups. See [docs/backups.md](docs/backups.md) for details.
 
 ## Dev / test / staging
 
