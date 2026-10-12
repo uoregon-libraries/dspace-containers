@@ -8,6 +8,9 @@ Layout at a high level:
   `compose.override.yml`, `exports/`, and `bin/`
 - `/path/to/scholarsbank/volumes/<volume>/`: host directories backing named
   volumes, e.g., `volumes/handle-server` and `volumes/caddy-conf`
+- `/path/to/scholarsbank/logs/`: container logs (`CONTAINER_LOG_DIR`)
+- `/path/to/scholarsbank/logrotate.conf` and `logrotate.status`: rotation for
+  those logs (see [container-logs.md](container-logs.md))
 - *Not* the systemd unit (see below)
 
 ## Notes:

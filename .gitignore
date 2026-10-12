@@ -12,6 +12,9 @@
 /exports
 !/export/db/.keep
 
+# Container logs, if dev's CONTAINER_LOG_DIR points inside the checkout
+/logs
+
 # Built tools and assembled TPS templates (both fully derivable via make)
 /bin
 /tps-templates/challenge.go.html
