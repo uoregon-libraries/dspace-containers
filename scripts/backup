@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+#
+# Nightly backup of a production install, run from root's crontab. See
+# "Backups" in README.md, and scripts/lib/backup.sh for how snapshots work.
+
+set -euo pipefail
+
+usage() {
+  cat >&2 <<EOF
+usage: $0 -u <podman user> -a <assetstore dir> -d <backup dir> [-k <days>]
+
+  -u  the user that runs the stack (rootless podman)
+  -a  host path of the assetstore, i.e., what rest and cli mount
+  -d  backup destination; must already exist
+  -k  days of snapshots to keep (default 14)
+EOF
+  exit 64
+}
+
+podman_user=
+assetstore=
+dest=
+keep_days=14
+while getopts u:a:d:k: opt; do
+  case $opt in
+    u) podman_user=$OPTARG ;;
+    a) assetstore=$OPTARG ;;
+    d) dest=$OPTARG ;;
+    k) keep_days=$OPTARG ;;
+    *) usage ;;
+  esac
+done
+shift $((OPTIND - 1))
+if [ $# -ne 0 ] || [ -z "$podman_user" ] || [ -z "$assetstore" ] || [ -z "$dest" ]; then
+  usage
+fi
+case $keep_days in
+  '' | *[!0-9]*) usage ;;
+esac
+
+. "$(dirname "$0")/lib/backup.sh"
+backup_init backup
+
+volumes=$(dirname "$checkout")/volumes
+
+# An unmounted assetstore would otherwise give us empty snapshots, and in a
+# couple of weeks retention would delete the last real one
+if [ -z "$(ls -A "$assetstore")" ]; then
+  echo "assetstore $assetstore is empty; is it mounted?" >&2
+  exit 1
+fi
+
+# Find the container now, rather than failing after the copies
+db=$(container_for db)
+
+snapshot_begin
+
+# The database goes first: everything it references is then sure to be in
+# the assetstore copy, and anything newer is just an orphan file
+step "dumping database"
+mkdir "$run/db"
+as_podman podman exec "$db" pg_dump -U dspace --no-owner --no-privileges dspace |
+  gzip >"$run/db/dspace.sql.gz"
+trailer=$(zcat "$run/db/dspace.sql.gz" | tail -n 10)
+if ! grep -q 'PostgreSQL database dump complete' <<<"$trailer"; then
+  echo "database dump looks truncated" >&2
+  exit 1
+fi
+
+step "copying assetstore"
+snapshot_dir "$assetstore" assetstore --exclude=.snapshot
+
+if [ -d "$volumes" ]; then
+  step "copying volume dirs"
+  # The database and Solr have their own backups, and copying their live
+  # files would give us something that can't be trusted
+  snapshot_dir "$volumes" volumes --exclude=/db --exclude=/solr --exclude=/assetstore
+else
+  step "no volume dirs at $volumes; skipping"
+fi
+
+step "copying config"
+mkdir "$run/config"
+cp -p "$checkout/.env" "$run/config/"
+if [ -f "$checkout/compose.override.yml" ]; then
+  cp -p "$checkout/compose.override.yml" "$run/config/"
+fi
+for var in SAML_SP_KEY_FILE SAML_SP_CERT_FILE; do
+  file=$(env_setting "$var")
+  if [ -n "$file" ]; then
+    case $file in
+      /*) ;;
+      *) file=$checkout/$file ;;
+    esac
+    cp -p "$file" "$run/config/"
+  fi
+done
+
+cat >"$run/BACKUP_INFO.txt" <<EOF
+Started: $name
+Finished: $(date '+%F %T %Z')
+Host: $(hostname)
+Checkout: $checkout
+Compose project: $project
+Assetstore: $assetstore
+Previous snapshot: ${prev:-none}
+EOF
+
+snapshot_finish

@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+#
+# Nightly backup of the Solr cores holding data that isn't in the database,
+# run from root's crontab. See "Backups" in README.md, and
+# scripts/lib/backup.sh for how snapshots work.
+#
+# The other cores (search, oai, authority) don't need this: the index jobs in
+# conf/crontab rebuild them from the database.
+
+set -euo pipefail
+
+usage() {
+  cat >&2 <<EOF
+usage: $0 -u <podman user> -d <backup dir> [-k <days>]
+
+  -u  the user that runs the stack (rootless podman)
+  -d  backup destination, the same as scripts/backup's; snapshots go in its
+      solr/ subdir
+  -k  days of snapshots to keep (default 14)
+EOF
+  exit 64
+}
+
+podman_user=
+dest=
+keep_days=14
+while getopts u:d:k: opt; do
+  case $opt in
+    u) podman_user=$OPTARG ;;
+    d) dest=$OPTARG ;;
+    k) keep_days=$OPTARG ;;
+    *) usage ;;
+  esac
+done
+shift $((OPTIND - 1))
+if [ $# -ne 0 ] || [ -z "$podman_user" ] || [ -z "$dest" ]; then
+  usage
+fi
+case $keep_days in
+  '' | *[!0-9]*) usage ;;
+esac
+
+cores=(statistics qaevent suggestion)
+
+# Inside the solr volume: Solr only writes backups under its home dir
+backup_dir=/var/solr/data/backup
+
+solr_api() {
+  as_podman podman exec "$solr" curl -sS --fail-with-body "http://localhost:8983/solr/$1"
+}
+
+# Pulls one field out of the "backup" section of a replication details
+# response that's had its whitespace stripped
+backup_field() {
+  sed -n "s/.*\"backup\":{[^}]*\"$2\":\"\([^\"]*\)\".*/\1/p" <<<"$1"
+}
+
+# Has Solr snapshot one core inside its container, then copies the snapshot
+# out. Solr starts the backup and returns right away, so this polls until
+# the details show a backup that started after our request, and finished.
+snapshot_core() {
+  local core=$1 details before started status i
+  details=$(solr_api "$core/replication?command=details" | tr -d '[:space:]')
+  before=$(backup_field "$details" startTime)
+
+  as_podman podman exec "$solr" sh -c \
+    "rm -rf '$backup_dir/snapshot.$core' && mkdir -p '$backup_dir'"
+  solr_api "$core/replication?command=backup&location=$backup_dir&name=$core" >/dev/null
+
+  # Up to two hours
+  for ((i = 0; i < 720; i++)); do
+    details=$(solr_api "$core/replication?command=details" | tr -d '[:space:]')
+    started=$(backup_field "$details" startTime)
+    status=$(backup_field "$details" status)
+    if [ -n "$started" ] && [ "$started" != "$before" ]; then
+      case $status in
+        success) break ;;
+        failed) break ;;
+      esac
+    fi
+    sleep 10
+  done
+  if [ "$status" != success ]; then
+    echo "solr backup of $core didn't succeed: $details" >&2
+    return 1
+  fi
+
+  # Extract to a staging dir next to the snapshot so snapshot_dir can
+  # hard-link segment files that are unchanged since the previous run. Solr
+  # gives every snapshot fresh mtimes, so compare by size and ignore times:
+  # Lucene never rewrites a file, so a name and size match is the same file.
+  local staging=$run/.staging/$core
+  mkdir -p "$staging"
+  as_podman podman exec "$solr" tar -C "$backup_dir/snapshot.$core" -c . |
+    tar -C "$staging" -x --numeric-owner
+  snapshot_dir "$staging" "$core" --size-only --no-times
+  rm -rf "$run/.staging"
+  as_podman podman exec "$solr" rm -rf "$backup_dir/snapshot.$core"
+}
+
+. "$(dirname "$0")/lib/backup.sh"
+backup_init backup-solr solr
+
+solr=$(container_for solr)
+
+snapshot_begin
+
+for core in "${cores[@]}"; do
+  step "snapshotting core $core"
+  snapshot_core "$core"
+done
+
+cat >"$run/BACKUP_INFO.txt" <<EOF
+Started: $name
+Finished: $(date '+%F %T %Z')
+Host: $(hostname)
+Checkout: $checkout
+Compose project: $project
+Cores: ${cores[*]}
+Previous snapshot: ${prev:-none}
+EOF
+
+snapshot_finish

@@ -245,6 +245,11 @@ missing field) or a command has host-shell syntax (`;`, `&`, `|`, redirects,
 work: `bin/render-crontab -dir /x -user x -mailto "" > /dev/null` (the
 flag values don't matter just to test rendering's success).
 
+## Backups
+
+DSpace is a bit complex where backups are concerned, so we have two custom
+scripts for doing backups. See [docs/backup.md](docs/backup.md) for details.
+
 ## Dev / test / staging
 
 ### Get data
