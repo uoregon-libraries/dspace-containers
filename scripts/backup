@@ -2,15 +2,6 @@
 #
 # Nightly backup of a production install, run from root's crontab. See
 # "Backups" in README.md, and scripts/lib/backup.sh for how snapshots work.
-# Each snapshot holds:
-#
-#   db/dspace.sql.gz  pg_dump of the database
-#   assetstore/       the assetstore
-#   volumes/          the host dirs backing named volumes (handle keys, caddy
-#                     drop-ins, ...), minus live database and Solr files
-#   config/           .env, compose.override.yml, and the SAML key pair
-#
-# Solr has its own job, scripts/backup-solr.
 
 set -euo pipefail
 

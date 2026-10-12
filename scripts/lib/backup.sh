@@ -1,19 +1,6 @@
 # Shared by scripts/backup and scripts/backup-solr; see "Backups" in
 # README.md. Not meant to be run directly.
 #
-# A backup job runs as root and writes one snapshot directory per run, named
-# for its start time, under its destination. Files that haven't changed since
-# the previous snapshot are hard links to it, so a run only costs what's new.
-# "latest" points at the newest complete snapshot. A run that dies leaves a
-# ".partial" dir, which the next run removes.
-#
-# Root does all the writing. Commands that need the stack run as the podman
-# user via "podman exec" and stream their output back, so that user never
-# needs access to the backup destination.
-#
-# Like scripts/cron-job, jobs are silent unless they fail. Each run's log is
-# kept under <dest>/logs either way.
-#
 # A job sets podman_user, dest, and keep_days, then calls:
 #
 #   backup_init <job> [dir]  checks, locking, and logging; snapshots go in

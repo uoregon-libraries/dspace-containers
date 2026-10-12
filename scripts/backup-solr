@@ -2,9 +2,7 @@
 #
 # Nightly backup of the Solr cores holding data that isn't in the database,
 # run from root's crontab. See "Backups" in README.md, and
-# scripts/lib/backup.sh for how snapshots work. Snapshots go in <dest>/solr,
-# and each holds one directory per core, ready for Solr's replication
-# "restore" command.
+# scripts/lib/backup.sh for how snapshots work.
 #
 # The other cores (search, oai, authority) don't need this: the index jobs in
 # conf/crontab rebuild them from the database.
