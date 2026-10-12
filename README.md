@@ -61,80 +61,8 @@ Notes:
 ## Production host layout
 
 Everything a deployment needs lives under one directory, so there's one place
-to look and one place to back up. Paths below use `/path/to/scholarsbank` for
-wherever that is (e.g., `/srv/sb`).
-
-- `/path/to/scholarsbank/app/`: this checkout, including `.env`,
-  `compose.override.yml`, `exports/`, and `bin/`
-- `/path/to/scholarsbank/volumes/<volume>/`: host directories backing named
-  volumes, e.g., `volumes/handle-server` and `volumes/caddy-conf`
-- *Not* the systemd unit (see below)
-
-Notes:
-
-- **Set `COMPOSE_PROJECT_NAME` in `.env`** (e.g., `scholarsbank`). Otherwise
-  the project name comes from the checkout's directory, `app`, and so does
-  every container and volume name (`app_db`).
-- Volumes
-  - Volume data never goes inside the checkout. Keeping them side by side means
-    nothing can be committed by accident, and nobody gets the idea that a
-    `./volumes/...` bind in the override is best-practice.
-  - Volumes are only for data we *regularly need to read and write*. Podman
-    permissions get *ugly* if you don't run the right commands first.
-  - Always use the long form for bind mounts, never the one-liners. The long form
-    keeps things like read-only rules intact, avoids accidentally having two
-    places for one mount (e.g., multiple services need to have the *exact* same
-    statistics and assetstore volumes)
-  - Use absolute `device:` paths in the production override, not `${PWD}`.
-    `driver_opts` are baked in when a volume is created, so a bad path sticks
-    until you remove the volume.
-- With SELinux, containers can only read the volume directories if they're
-  labeled for it. A persistent rule (survives relabels, unlike `chcon`):
-
-  ```bash
-  sudo semanage fcontext -a -t container_file_t '/path/to/scholarsbank/volumes(/.*)?'
-  sudo restorecon -R /path/to/scholarsbank/volumes
-  ```
-
-### Running under systemd
-
-The stack runs as a rootless podman *user* unit belonging to the podman user
-(e.g., `dspace`). That user needs lingering (`sudo loginctl enable-linger
-dspace`) so the unit starts at boot without anybody logging in.
-
-`conf/scholarsbank@.service` is a template unit, which keeps host paths out of
-the repo: the instance name is the checkout's path, escaped, and the unit uses
-that as its working directory. `/path/to/scholarsbank/app` becomes
-`scholarsbank@path-to-scholarsbank-app.service`.
-
-Install it as the podman user, from the checkout:
-
-```bash
-mkdir -p ~/.config/systemd/user
-cp conf/scholarsbank@.service ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable --now "scholarsbank@$(systemd-escape --path "$PWD").service"
-
-# Day to day (tab completion fills in the instance name)
-systemctl --user status scholarsbank@path-to-scholarsbank-app
-journalctl --user -u scholarsbank@path-to-scholarsbank-app
-```
-
-Notes:
-
-- Copy the unit; don't `systemctl link` it. Linked units outside systemd's own
-  directories can run afoul of SELinux, and `disable` deletes the link. After
-  changing the unit in the repo, copy it again and `daemon-reload`.
-- `systemctl --user` needs the user's session bus. `ssh` in as the user, don't
-  `sudo` to switch users. It gets messy.
-- The unit runs `scripts/compose up`, so it starts every service in the
-  profiles `COMPOSE_PROFILES` enables, e.g., `handle` once that profile is on.
-  `scripts/compose` is `podman compose` with `COMPOSE_PROFILES` passed as
-  `--profile` flags, because podman-compose before 1.6.0 (such as a distro
-  package) silently ignores it. Use it instead of a bare `podman compose`
-  anywhere profiled services matter (`down`, `ps`, `logs`, ...).
-- To add a service to a running stack without restarting the site, enable its
-  profile and run `scripts/compose up -d <service>`.
+to look and one place to back up. See
+[docs/prod-layout.md](docs/prod-layout.md) for details.
 
 ## Handle server
 
@@ -147,108 +75,13 @@ one-time setup plus registration with handle.net: see
 ## Scheduled jobs
 
 Compose makes cron hard, and DSpace needs a *lot* of cron love. We had to put
-together some weird magic to make it work in a semi-nice way.
-
-High-level info:
-
-- The host's cron runs jobs in a throwaway container (using the `cli` service)
-- `conf/crontab` lists all jobs in a sort of "pseudo-crontab" format. It is
-  *not usable* as-is.
-- `bin/render-crontab` fills in `conf/crontab` and prints a usable crontab to
-  stdout (suitable for dropping into `/etc/cron.d/`, for instance)
-
-### Setup
-
-Probably only for production. Dev definitely doesn't need cron jobs, and
-staging *probably* doesn't.
-
-1. Build the renderer: `make bin/render-crontab`. This needs Go, but the
-   result is a static binary, so you can build it elsewhere and copy it to
-   `bin/` on the server.
-1. Render the crontab to a file (see below). Always render to a file first; if
-   rendering fails, it prints nothing.
-1. Install the file on the server
-1. You *must* rerender if you change `conf/crontab`, the mail address, the
-   podman user, or move the project or `podman-compose` on the server
-
-The renderer takes everything about *the production server* as flags:
-
-- `-dir` (required): absolute path the project is deployed
-- `-user` (required): the podman user the jobs run as (use `-user ""` to render
-  a user crontab instead of a system crontab)
-- `-mailto` (required): where cron emails job failures (use `-mailto ""` to
-  leave MAILTO out of the file)
-- `-compose-dir` (optional): the directory holding `podman-compose` on
-  production; unnecessary if it's in `/usr/local/bin`, `/usr/bin`, or `/bin`
-
-e.g.:
-
-```bash
-bin/render-crontab -dir /path/to/scholarsbank/app -user dspace \
-  -mailto dspace-admins@example.org -compose-dir /home/dspace/.local/bin \
-  > sb.cron
-```
-
-Then copy `sb.cron` to the server and install it:
-
-```bash
-sudo install -m 644 -o root -g root sb.cron /etc/cron.d/scholarsbank
-```
-
-The file must be owned by root and not group- or world-writable
-
-*Note*: setting up a user crontab needs a bit of care and isn't directly
-supported. This info can help, but you'll be mostly on your own.
-
-### How jobs run
-
-Jobs run through a wrapper (`scripts/cron-job`). You can also run that manually
-to get an exact test of how cron will behave.
-
-Notes about this wrapper:
-
-- It uses the `cli` service, so only the dspace subcommand or binary is
-  specified, e.g., `scripts/cron-job index-discovery`
-- It runs compose from the project root; podman compose needs this to load `.env`
-  and `compose.override.yml`
-- A successful job prints nothing while a failed job prints its output and exit
-  status, which cron emails to the renderer's `-mailto` address
-- If the same command is still running from its last scheduled run, the new
-  run is skipped and reported as a failure
-- Jobs never start dependencies - if the stack is down, they will fail (no db,
-  no Solr, etc.) and email you
-- It calls `podman-compose` directly (not `podman compose`), and it expects the
-  stack's user to have lingering enabled; this is required for rootless podman
-  anyway, so should be a non-issue
-
-### Modifying jobs
-
-If you edit `conf/crontab`, a few things to keep in mind:
-
-- Don't put user, path, mailto, etc. here: the renderer does this
-- Don't try to set environment variables here unless you actually know what
-  they do: they will affect the compose run, *not* the container, or at least
-  not directly. You'll get confused. Don't do it.
-- Each entry is a cron schedule followed by a command sent to the `cli`
-  service. Understand the cli service (see above) before you touch this file.
-- One command per line, and don't get fancy! ";", "&&", pipes, and redirects
-  run on the host, *not the container*. To chain commands in the container,
-  quote them: `sh -c 'dspace a && dspace b'`. Better yet, don't do this. Write
-  a script instead.
-- Cron treats a bare "%" as a newline, so write it as "\%"
-- Again, times use the host clock/timezone. In practice this usually matches
-  our containers' times, but be aware just in case.
-
-The renderer refuses to print anything if a schedule is malformed (e.g., a
-missing field) or a command has host-shell syntax (`;`, `&`, `|`, redirects,
-`$`, a bare `%`, ...) outside of quotes. Run it after editing to check your
-work: `bin/render-crontab -dir /x -user x -mailto "" > /dev/null` (the
-flag values don't matter just to test rendering's success).
+together some weird magic to make it work in a semi-nice way. See
+[docs/cron.md](docs/cron.md) for details.
 
 ## Backups
 
 DSpace is a bit complex where backups are concerned, so we have two custom
-scripts for doing backups. See [docs/backup.md](docs/backup.md) for details.
+scripts for doing backups. See [docs/backups.md](docs/backups.md) for details.
 
 ## Dev / test / staging
 
