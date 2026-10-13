@@ -55,7 +55,7 @@ x-rest-env: &rest-env
   crosswalk__D__dissemination__D__DataCite__D__publisher: ${DSPACE_NAME:?DSPACE_NAME must be set}
 
   google__P__analytics__P__key: ${GA_KEY:-}
-  
+
   webui__P__strengths__P__show: true
   webui__P__user__P__assumelogin: true
 
@@ -323,9 +323,8 @@ services:
 
   # Local dev only, enable via COMPOSE_PROFILES in `.env`.
   #
-  # Env values use `:-`, never `:?`, because podman-compose interpolates
-  # services even when their profile is off. (CONTAINER_LOG_DIR is fine: every
-  # environment has to set it anyway.)
+  # dev-only env values use `:-`, never `:?`, because podman-compose
+  # interpolates services even when their profile is off.
 
   # Captures outgoing mail instead of sending it. Set MAIL_SERVER=smtpdebug.
   smtpdebug:

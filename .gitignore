@@ -12,7 +12,7 @@
 /exports
 !/export/db/.keep
 
-# Container logs, if dev's CONTAINER_LOG_DIR points inside the checkout
+# Container logs for dev
 /logs
 
 # Built tools and assembled TPS templates (both fully derivable via make)

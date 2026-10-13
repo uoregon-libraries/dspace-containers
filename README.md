@@ -85,9 +85,8 @@ scripts for doing backups. See [docs/backups.md](docs/backups.md) for details.
 
 ## Container logs
 
-Each service writes its stdout/stderr to its own file in `CONTAINER_LOG_DIR`
-(required in `.env` for every environment: an absolute path to a directory
-that already exists). Production needs logrotate for these. See
+Each service writes its stdout/stderr to its own file in `CONTAINER_LOG_DIR`.
+Production needs logrotate set up to avoid disk exhaustion. See
 [docs/container-logs.md](docs/container-logs.md) for details.
 
 ## Dev / test / staging

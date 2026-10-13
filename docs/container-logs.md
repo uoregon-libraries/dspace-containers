@@ -2,10 +2,9 @@
 
 *Paths below use `/path/to/scholarsbank` in place of the real directory.*
 
-Every service writes its stdout/stderr to its own file in
-`CONTAINER_LOG_DIR`: `web.log`, `rest.log`, `cli.log`, `handle.log`, etc.
-These are podman's normal `k8s-file` logs, just kept somewhere stable instead
-of in each container's storage.
+Every service writes its stdout/stderr to its own file in `CONTAINER_LOG_DIR`:
+`web.log`, `rest.log`, etc. These are podman's normal `k8s-file` logs, just
+kept somewhere stable instead of in each container's storage.
 
 Why not podman's defaults?
 
@@ -15,20 +14,21 @@ Why not podman's defaults?
 - The `journald` driver needs per-user journals, which a rootless podman user
   only gets with persistent journal storage and a non-system UID. Without
   those, the user can't read the logs (and `podman logs` fails). Either fix is
-  a system-wide journald change.
+  a system-wide journald change we don't want to deal with when there's
+  user-level improvements we can make.
 
 ## Setup
 
-`CONTAINER_LOG_DIR` is required in `.env` for every environment, and it has
-two hard rules:
+Set `CONTAINER_LOG_DIR` in `.env`. Two hard rules:
 
-- **It must be absolute.** Podman stores a relative path as-is and resolves it
+- It must be absolute: Podman stores a relative path as-is and resolves it
   against whatever directory podman runs from later, so `podman logs` or a
-  restart from somewhere else reads or writes the wrong file.
-- **It must already exist.** Otherwise conmon can't open the file and the
-  container won't start (`conmon failed: exit status 1`).
+  restart from somewhere else reads or writes the wrong file. You can use
+  `${PWD}/...` in place of `./...`.
+- It must already exist, otherwise conmon can't open the file and the container
+  won't start (`conmon failed: exit status 1`).
 
-In production, use a `logs/` dir alongside `app/` and `volumes/`:
+In production, use a `logs/` dir (alongside `app/` and `volumes/`):
 
 ```bash
 mkdir /path/to/scholarsbank/logs
@@ -36,8 +36,7 @@ mkdir /path/to/scholarsbank/logs
 
 It's *not* under `volumes/`, so backups skip it.
 
-Dev can point it at `logs/` in the checkout (gitignored), but still as an
-absolute path.
+Dev should use the `.env.example` value, `${PWD}/logs/`.
 
 ## Reading logs
 
@@ -50,9 +49,8 @@ absolute path.
 
 ## Rotation
 
-Nothing rotates these files on its own, so production needs logrotate.
-Without root, run logrotate as the podman user with its own config and state
-file, e.g., `/path/to/scholarsbank/logrotate.conf`:
+On dev, just delete files as needed. In prod, the podman user needs a logrotate
+config and cron job. e.g., `/path/to/scholarsbank/logrotate.conf`:
 
 ```
 /path/to/scholarsbank/logs/*.log {
