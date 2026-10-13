@@ -8,9 +8,9 @@
 # restart them. Use "always", not "unless-stopped": podman-restart.service only
 # matches "always". `cli` is run with `run --rm`, so it doesn't get one.
 #
-# Every service but the local-dev ones writes stdout/stderr to its own file in
-# CONTAINER_LOG_DIR instead of podman's per-container storage, so logs survive
-# `down` and container recreation. See docs/container-logs.md.
+# Every service writes stdout/stderr to its own file in CONTAINER_LOG_DIR
+# instead of podman's per-container storage, so logs survive `down` and
+# container recreation. See docs/container-logs.md.
 
 networks:
   dspacenet:
@@ -324,10 +324,15 @@ services:
   # Local dev only, enable via COMPOSE_PROFILES in `.env`.
   #
   # Env values use `:-`, never `:?`, because podman-compose interpolates
-  # services even when their profile is off.
+  # services even when their profile is off. (CONTAINER_LOG_DIR is fine: every
+  # environment has to set it anyway.)
 
   # Captures outgoing mail instead of sending it. Set MAIL_SERVER=smtpdebug.
   smtpdebug:
+    logging:
+      driver: k8s-file
+      options:
+        path: ${CONTAINER_LOG_DIR:?CONTAINER_LOG_DIR must be set}/smtpdebug.log
     build:
       dockerfile: Dockerfile-smtpdebug
     profiles: [local-dev]
@@ -339,6 +344,10 @@ services:
   # SAML IdP (go-saml); see "IdP" in README.md. Its entrypoint refuses to
   # start if the URLs are blank.
   idp:
+    logging:
+      driver: k8s-file
+      options:
+        path: ${CONTAINER_LOG_DIR:?CONTAINER_LOG_DIR must be set}/idp.log
     build:
       dockerfile: Dockerfile-idp
     profiles: [local-dev]

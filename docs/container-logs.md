@@ -2,10 +2,10 @@
 
 *Paths below use `/path/to/scholarsbank` in place of the real directory.*
 
-Every service except the local-dev ones (smtpdebug, idp) writes its
-stdout/stderr to its own file in `CONTAINER_LOG_DIR`: `web.log`, `rest.log`,
-`cli.log`, `handle.log`, etc. These are podman's normal `k8s-file` logs, just
-kept somewhere stable instead of in each container's storage.
+Every service writes its stdout/stderr to its own file in
+`CONTAINER_LOG_DIR`: `web.log`, `rest.log`, `cli.log`, `handle.log`, etc.
+These are podman's normal `k8s-file` logs, just kept somewhere stable instead
+of in each container's storage.
 
 Why not podman's defaults?
 
