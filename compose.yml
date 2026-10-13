@@ -25,8 +25,8 @@ networks:
 #
 # `<<:` merges only one level deep: any key a service sets *replaces* the
 # shared value outright. A service that sets `volumes:` gets only those
-# volumes, and one that sets `environment:` gets only those vars unless it
-# starts with `<<: *rest-env`.
+# volumes (as `handle` intends), and one that sets `environment:` gets only
+# those vars unless it starts with `<<: *rest-env`.
 #
 # The env key syntax may look odd, but it is how to override dspace.cfg
 # settings via env variables.
@@ -250,18 +250,10 @@ services:
       - 2641:2641/tcp
       - 2641:2641/udp
       - 8000:8000/tcp
-    # The full list, since `<<:` can't append to rest's. Keep it in sync with
-    # x-rest's volumes, plus handle-server.
+    # Replaces x-rest's volumes rather than adding to them: the handle server
+    # only reads the database, and logs to stdout, so it needs none of them.
+    # This volume holds private keys, so never mount it anywhere else.
     volumes:
-      - assetstore:/usr/local/dspace/assetstore
-      - statistics:/usr/local/dspace/statistics
-      - sitemaps:/usr/local/dspace/sitemaps
-      - oai-cache:/usr/local/dspace/var/oai
-      - curation-queues:/usr/local/dspace/ctqueues
-      - exports:/usr/local/dspace/exports
-      - imports:/usr/local/dspace/imports
-      - reports:/usr/local/dspace/reports
-      - cli-logs:/usr/local/dspace/log
       - handle-server:/usr/local/dspace/handle-server
 
   db:

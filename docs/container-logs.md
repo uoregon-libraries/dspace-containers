@@ -102,6 +102,6 @@ the shared value outright:
 
 - A service that sets `environment:` must start it with `<<: *rest-env`, or it
   loses every shared DSpace setting.
-- A service that sets `volumes:` gets only what it lists. That's why `handle`
-  repeats the full volume list (plus `handle-server`); keep it in sync with
-  `x-rest`'s.
+- A service that sets `volumes:` gets only what it lists. `handle` relies on
+  this: it mounts only `handle-server`, which holds the handle server's
+  private keys and shouldn't be visible to `rest` or `cli`.
