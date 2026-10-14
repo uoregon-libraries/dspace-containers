@@ -83,6 +83,12 @@ together some weird magic to make it work in a semi-nice way. See
 DSpace is a bit complex where backups are concerned, so we have two custom
 scripts for doing backups. See [docs/backups.md](docs/backups.md) for details.
 
+## Container logs
+
+Each service writes its stdout/stderr to its own file in `CONTAINER_LOG_DIR`.
+Production needs logrotate set up to avoid disk exhaustion. See
+[docs/container-logs.md](docs/container-logs.md) for details.
+
 ## Dev / test / staging
 
 ### Get data

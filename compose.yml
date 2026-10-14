@@ -6,8 +6,11 @@
 #
 # Long-running services use `restart: always` so crashes (including OOM kills)
 # restart them. Use "always", not "unless-stopped": podman-restart.service only
-# matches "always". `cli` inherits it from `rest`, but podman-compose drops it
-# for `run --rm`, so one-off jobs never restart.
+# matches "always". `cli` is run with `run --rm`, so it doesn't get one.
+#
+# Every service writes stdout/stderr to its own file in CONTAINER_LOG_DIR
+# instead of podman's per-container storage, so logs survive `down` and
+# container recreation. See docs/container-logs.md.
 
 networks:
   dspacenet:
@@ -15,9 +18,112 @@ networks:
       config:
         - subnet: ${DSPACE_SUBNET:?DSPACE_SUBNET must be set}
 
+# Shared by rest, cli, and handle via YAML merge keys (`<<: *rest`), *not*
+# `extends`: podman-compose's `extends` shallow-copies the base, so nested
+# maps like `logging.options` end up shared, and the last service to set them
+# wins for all three (see docs/container-logs.md).
+#
+# `<<:` merges only one level deep: any key a service sets *replaces* the
+# shared value outright. A service that sets `volumes:` gets only those
+# volumes (as `handle` intends), and one that sets `environment:` gets only
+# those vars unless it starts with `<<: *rest-env`.
+#
+# The env key syntax may look odd, but it is how to override dspace.cfg
+# settings via env variables.
+#
+#   - `__P__` becomes `.` (e.g. dspace__P__dir => dspace.dir)
+#   - `__D__` becomes `-` (e.g. google__D__metadata => google-metadata)
+#
+# See https://github.com/DSpace/DSpace/blob/main/dspace/config/config-definition.xml
+x-rest-env: &rest-env
+  LOGGING_CONFIG: /usr/local/dspace/config/log4j2-container.xml
+
+  dspace__P__name: ${DSPACE_NAME:?DSPACE_NAME must be set}
+  dspace__P__shortname: ${DSPACE_NAME:?DSPACE_NAME must be set}
+  dspace__P__server__P__url: ${PUBLIC_URL:?PUBLIC_URL must be set}/server
+  dspace__P__ui__P__url: ${PUBLIC_URL:?PUBLIC_URL must be set}
+  proxies__P__trusted__P__ipranges: ${DSPACE_SUBNET:?DSPACE_SUBNET must be set}
+  dspace__P__server__P__ssr__P__url: http://rest:8080/server
+
+  mail__P__server: ${MAIL_SERVER:?MAIL_SERVER must be set}
+  mail__P__from__P__address: ${FROM_ADDRESS:?FROM_ADDRESS must be set}
+  mail__P__admin: ${MAIL_ADMIN:?MAIL_ADMIN must be set}
+
+  handle__P__canonical__P__prefix: https://hdl.handle.net/
+  handle__P__prefix: ${HANDLE_PREFIX:-12345678}
+
+  crosswalk__D__dissemination__D__DataCite__D__publisher: ${DSPACE_NAME:?DSPACE_NAME must be set}
+
+  google__P__analytics__P__key: ${GA_KEY:-}
+
+  webui__P__strengths__P__show: true
+  webui__P__user__P__assumelogin: true
+
+  embargo__P__field__P__terms: dc.description.embargo
+  embargo__P__field__P__lift: dc.description.embargo
+
+  # A Java heap OOM leaves Tomcat running but broken, so make the JVM exit
+  # and let the restart policy bring it back
+  JAVA_OPTS: -XX:+ExitOnOutOfMemoryError ${REST_JAVA_OPTS:-}
+
+  plugin__P__sequence__P__org__P__dspace__P__authenticate__P__AuthenticationMethod: >-
+    org.dspace.authenticate.IPAuthentication,
+    org.dspace.authenticate.PasswordAuthentication,
+    org.dspace.authenticate.SamlAuthentication
+  authentication__D__saml__P__relying__D__party__D__id: ${SAML_RELYING_PARTY_ID:?SAML_RELYING_PARTY_ID must be set}
+  authentication__D__saml__P__autoregister: ${SAML_AUTOREGISTER:-false}
+  authentication__D__saml__P__login__P__specialgroup: ${SAML_DEFAULT_GROUPS:-default-user}
+  authentication__D__ip__P__UO\ Only: ${AUTHENTICATION_IPS:-}
+  # The relying-party ID is part of these keys, and compose can't
+  # interpolate keys, so the REST entrypoint rewrites "X_SAML_<rest>" to
+  # "saml__D__relying__D__party__P__<id>__P__<rest>".
+  X_SAML_asserting__D__party__P__metadata__D__uri: ${SAML_IDP_METADATA_URI:?SAML_IDP_METADATA_URI must be set}
+  X_SAML_attributes: ${SAML_ATTRIBUTES:?SAML_ATTRIBUTES must be set}
+  X_SAML_signing__P__credentials__P__0__P__private__D__key__D__location: file:///run/secrets/saml-sp.key
+  X_SAML_signing__P__credentials__P__0__P__certificate__D__location: file:///run/secrets/saml-sp.crt
+
+  rest__P__cors__P__allowed__D__origins: ${REST_ALLOWED_ORIGINS:?REST_ALLOWED_ORIGINS must be set}
+
+x-rest: &rest
+  build:
+    dockerfile: Dockerfile-rest
+    args:
+      MAVEN_FLAGS: ${MAVEN_FLAGS:-}
+
+  secrets:
+    - saml-sp.key
+    - saml-sp.crt
+
+  environment: *rest-env
+  depends_on:
+    - db
+    - solr
+  networks:
+    dspacenet: {}
+  # This is certainly far more volumes than necessary, but it's not obvious
+  # what we definitely will never use, and a container restart shouldn't
+  # wreck workflows...
+  volumes:
+    - assetstore:/usr/local/dspace/assetstore
+    - statistics:/usr/local/dspace/statistics
+    - sitemaps:/usr/local/dspace/sitemaps
+    - oai-cache:/usr/local/dspace/var/oai
+    - curation-queues:/usr/local/dspace/ctqueues
+    - exports:/usr/local/dspace/exports
+    - imports:/usr/local/dspace/imports
+    - reports:/usr/local/dspace/reports
+    # Tomcat won't write logs here, but we mount it here since "cli" inherits
+    # this setting, and then we catch any one-offs accidentally run against
+    # the "rest" service
+    - cli-logs:/usr/local/dspace/log
+
 services:
   web:
     restart: always
+    logging:
+      driver: k8s-file
+      options:
+        path: ${CONTAINER_LOG_DIR:?CONTAINER_LOG_DIR must be set}/web.log
     build:
       dockerfile: Dockerfile-caddy
     depends_on:
@@ -41,6 +147,10 @@ services:
 
   angular:
     restart: always
+    logging:
+      driver: k8s-file
+      options:
+        path: ${CONTAINER_LOG_DIR:?CONTAINER_LOG_DIR must be set}/angular.log
     build:
       dockerfile: Dockerfile-angular
       target: production
@@ -87,93 +197,12 @@ services:
       dspacenet: {}
 
   rest:
+    <<: *rest
     restart: always
-    build:
-      dockerfile: Dockerfile-rest
-      args:
-        MAVEN_FLAGS: ${MAVEN_FLAGS:-}
-
-    secrets:
-      - saml-sp.key
-      - saml-sp.crt
-
-    # The env key syntax may look odd, but it is how to override dspace.cfg
-    # settings via env variables.
-    #
-    #   - `__P__` becomes `.` (e.g. dspace__P__dir => dspace.dir)
-    #   - `__D__` becomes `-` (e.g. google__D__metadata => google-metadata)
-    #
-    # See https://github.com/DSpace/DSpace/blob/main/dspace/config/config-definition.xml
-    environment:
-      LOGGING_CONFIG: /usr/local/dspace/config/log4j2-container.xml
-
-      dspace__P__name: ${DSPACE_NAME:?DSPACE_NAME must be set}
-      dspace__P__shortname: ${DSPACE_NAME:?DSPACE_NAME must be set}
-      dspace__P__server__P__url: ${PUBLIC_URL:?PUBLIC_URL must be set}/server
-      dspace__P__ui__P__url: ${PUBLIC_URL:?PUBLIC_URL must be set}
-      proxies__P__trusted__P__ipranges: ${DSPACE_SUBNET:?DSPACE_SUBNET must be set}
-      dspace__P__server__P__ssr__P__url: http://rest:8080/server
-
-      mail__P__server: ${MAIL_SERVER:?MAIL_SERVER must be set}
-      mail__P__from__P__address: ${FROM_ADDRESS:?FROM_ADDRESS must be set}
-      mail__P__admin: ${MAIL_ADMIN:?MAIL_ADMIN must be set}
-
-      handle__P__canonical__P__prefix: https://hdl.handle.net/
-      handle__P__prefix: ${HANDLE_PREFIX:-12345678}
-
-      crosswalk__D__dissemination__D__DataCite__D__publisher: ${DSPACE_NAME:?DSPACE_NAME must be set}
-
-      google__P__analytics__P__key: ${GA_KEY:-}
-      
-      webui__P__strengths__P__show: true
-      webui__P__user__P__assumelogin: true
-
-      embargo__P__field__P__terms: dc.description.embargo
-      embargo__P__field__P__lift: dc.description.embargo
-
-      # A Java heap OOM leaves Tomcat running but broken, so make the JVM exit
-      # and let the restart policy bring it back
-      JAVA_OPTS: -XX:+ExitOnOutOfMemoryError ${REST_JAVA_OPTS:-}
-
-      plugin__P__sequence__P__org__P__dspace__P__authenticate__P__AuthenticationMethod: >-
-        org.dspace.authenticate.IPAuthentication,
-        org.dspace.authenticate.PasswordAuthentication,
-        org.dspace.authenticate.SamlAuthentication
-      authentication__D__saml__P__relying__D__party__D__id: ${SAML_RELYING_PARTY_ID:?SAML_RELYING_PARTY_ID must be set}
-      authentication__D__saml__P__autoregister: ${SAML_AUTOREGISTER:-false}
-      authentication__D__saml__P__login__P__specialgroup: ${SAML_DEFAULT_GROUPS:-default-user}
-      authentication__D__ip__P__UO\ Only: ${AUTHENTICATION_IPS:-}
-      # The relying-party ID is part of these keys, and compose can't
-      # interpolate keys, so the REST entrypoint rewrites "X_SAML_<rest>" to
-      # "saml__D__relying__D__party__P__<id>__P__<rest>".
-      X_SAML_asserting__D__party__P__metadata__D__uri: ${SAML_IDP_METADATA_URI:?SAML_IDP_METADATA_URI must be set}
-      X_SAML_attributes: ${SAML_ATTRIBUTES:?SAML_ATTRIBUTES must be set}
-      X_SAML_signing__P__credentials__P__0__P__private__D__key__D__location: file:///run/secrets/saml-sp.key
-      X_SAML_signing__P__credentials__P__0__P__certificate__D__location: file:///run/secrets/saml-sp.crt
-
-      rest__P__cors__P__allowed__D__origins: ${REST_ALLOWED_ORIGINS:?REST_ALLOWED_ORIGINS must be set}
-
-    depends_on:
-      - db
-      - solr
-    networks:
-      dspacenet: {}
-    # This is certainly far more volumes than necessary, but it's not obvious
-    # what we definitely will never use, and a container restart shouldn't
-    # wreck workflows...
-    volumes:
-      - assetstore:/usr/local/dspace/assetstore
-      - statistics:/usr/local/dspace/statistics
-      - sitemaps:/usr/local/dspace/sitemaps
-      - oai-cache:/usr/local/dspace/var/oai
-      - curation-queues:/usr/local/dspace/ctqueues
-      - exports:/usr/local/dspace/exports
-      - imports:/usr/local/dspace/imports
-      - reports:/usr/local/dspace/reports
-      # Tomcat won't write logs here, but we mount it here since "cli" inherits
-      # this setting, and then we catch any one-offs accidentally run against
-      # the "rest" service
-      - cli-logs:/usr/local/dspace/log
+    logging:
+      driver: k8s-file
+      options:
+        path: ${CONTAINER_LOG_DIR:?CONTAINER_LOG_DIR must be set}/rest.log
 
   # "cli": one-off DSpace commands (cron jobs / admin tasks), e.g.:
   #
@@ -181,10 +210,14 @@ services:
   #
   # See README.md for more details.
   cli:
-    extends:
-      service: rest
+    <<: *rest
     profiles: [tools]
+    logging:
+      driver: k8s-file
+      options:
+        path: ${CONTAINER_LOG_DIR:?CONTAINER_LOG_DIR must be set}/cli.log
     environment:
+      <<: *rest-env
       # Fail fast on OOM rather than hang. Setting anything here disables
       # bin/dspace's default JAVA_OPTS, so we keep its UTF-8 encoding.
       JAVA_OPTS: -XX:+ExitOnOutOfMemoryError -Dfile.encoding=UTF-8 ${CLI_JAVA_OPTS:-}
@@ -197,14 +230,18 @@ services:
   # Env values use `:-`, never `:?`: podman-compose interpolates services even
   # when their profile is off.
   handle:
+    <<: *rest
     restart: always
-    extends:
-      service: rest
+    logging:
+      driver: k8s-file
+      options:
+        path: ${CONTAINER_LOG_DIR:?CONTAINER_LOG_DIR must be set}/handle.log
     profiles: [handle]
     command: ["/usr/local/scripts/handle-server.sh"]
     depends_on:
       - db
     environment:
+      <<: *rest-env
       JAVA_OPTS: ${HANDLE_JAVA_OPTS:--Xmx256m}
     # Unlike everything else, this is published directly rather than via
     # Caddy: it isn't HTTP-only, and the ports are fixed by what's registered
@@ -213,11 +250,18 @@ services:
       - 2641:2641/tcp
       - 2641:2641/udp
       - 8000:8000/tcp
+    # Replaces x-rest's volumes rather than adding to them: the handle server
+    # only reads the database, and logs to stdout, so it needs none of them.
+    # This volume holds private keys, so never mount it anywhere else.
     volumes:
       - handle-server:/usr/local/dspace/handle-server
 
   db:
     restart: always
+    logging:
+      driver: k8s-file
+      options:
+        path: ${CONTAINER_LOG_DIR:?CONTAINER_LOG_DIR must be set}/db.log
     build:
       dockerfile: Dockerfile-pgsql
     environment:
@@ -231,6 +275,10 @@ services:
 
   solr:
     restart: always
+    logging:
+      driver: k8s-file
+      options:
+        path: ${CONTAINER_LOG_DIR:?CONTAINER_LOG_DIR must be set}/solr.log
     build:
       dockerfile: Dockerfile-solr
     environment:
@@ -243,6 +291,10 @@ services:
 
   tps:
     restart: always
+    logging:
+      driver: k8s-file
+      options:
+        path: ${CONTAINER_LOG_DIR:?CONTAINER_LOG_DIR must be set}/tps.log
     build:
       dockerfile: Dockerfile-tps
     networks:
@@ -271,11 +323,15 @@ services:
 
   # Local dev only, enable via COMPOSE_PROFILES in `.env`.
   #
-  # Env values use `:-`, never `:?`, because podman-compose interpolates
-  # services even when their profile is off.
+  # dev-only env values use `:-`, never `:?`, because podman-compose
+  # interpolates services even when their profile is off.
 
   # Captures outgoing mail instead of sending it. Set MAIL_SERVER=smtpdebug.
   smtpdebug:
+    logging:
+      driver: k8s-file
+      options:
+        path: ${CONTAINER_LOG_DIR:?CONTAINER_LOG_DIR must be set}/smtpdebug.log
     build:
       dockerfile: Dockerfile-smtpdebug
     profiles: [local-dev]
@@ -287,6 +343,10 @@ services:
   # SAML IdP (go-saml); see "IdP" in README.md. Its entrypoint refuses to
   # start if the URLs are blank.
   idp:
+    logging:
+      driver: k8s-file
+      options:
+        path: ${CONTAINER_LOG_DIR:?CONTAINER_LOG_DIR must be set}/idp.log
     build:
       dockerfile: Dockerfile-idp
     profiles: [local-dev]
