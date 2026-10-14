@@ -171,6 +171,10 @@ services:
       DSPACE_UI_PORT: 4000
       DSPACE_UI_NAMESPACE: /
 
+      # The *public* UI URL. SSR only renders requests whose Host matches this.
+      # It's also used for redirects and robots.txt.
+      DSPACE_UI_BASEURL: ${PUBLIC_URL:?PUBLIC_URL must be set}
+
       # How many SSR worker processes pm2 runs
       PM2_INSTANCES: ${PM2_INSTANCES:-max}
 
