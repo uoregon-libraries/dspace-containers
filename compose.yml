@@ -141,6 +141,7 @@ services:
         org.dspace.authenticate.SamlAuthentication
       authentication__D__saml__P__relying__D__party__D__id: ${SAML_RELYING_PARTY_ID:?SAML_RELYING_PARTY_ID must be set}
       authentication__D__saml__P__autoregister: ${SAML_AUTOREGISTER:-false}
+      authentication__D__saml__P__login__P__specialgroup: ${SAML_DEFAULT_GROUPS:-default-user}
       authentication__D__ip__P__UO\ Only: ${AUTHENTICATION_IPS:-}
       # The relying-party ID is part of these keys, and compose can't
       # interpolate keys, so the REST entrypoint rewrites "X_SAML_<rest>" to
