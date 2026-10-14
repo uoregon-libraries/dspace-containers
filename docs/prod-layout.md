@@ -73,5 +73,3 @@ Notes:
   `--profile` flags, because podman-compose before 1.6.0 (such as a distro
   package) silently ignores it. Use it instead of a bare `podman compose`
   anywhere profiled services matter (`down`, `ps`, `logs`, ...).
-- To add a service to a running stack without restarting the site, enable its
-  profile and run `scripts/compose up -d <service>`.
