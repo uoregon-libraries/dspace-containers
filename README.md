@@ -159,10 +159,19 @@ below, but make sure you use `podman compose down` to stop and remove all
 containers. DSpace only reads the keys on startup, and podman secrets are funky
 as it is.
 
+To generate keys, set `sb_base_dir` to the actual directory name, and run this:
+
 ```bash
-openssl req -x509 -newkey rsa:3072 -nodes -days 3650 \
-  -keyout conf/rest/dev-saml-sp.key -out conf/rest/dev-saml-sp.crt \
-  -subj "/CN=scholarsbank-dev-sp"
+sb_base_dir=/srv/XYZZY
+openssl req \
+  -newkey rsa:4096 \
+  -nodes \
+  -out $sb_base_dir/secrets/saml/scholarsbank.crt \
+  -keyout $sb_base_dir/secrets/saml/scholarsbank.key \
+  -x509 \
+  -days 1095 \
+  -sha256 \
+  -subj "/CN=scholarsbank.uoregon.edu"
 ```
 
 **Note 3**: The IdP doesn't support single logout, so to switch users, log out
