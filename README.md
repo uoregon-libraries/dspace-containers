@@ -189,6 +189,15 @@ You'll probably want a local admin for easier access. Use the `cli` service:
 docker compose --profile tools run --rm --no-deps cli create-administrator -e admin@example.org -p adm -f Ad -l Min
 ```
 
+### Register custom metadata
+
+There are custom metadata fields defined in the `dspace-rest` repository that must be registered for 
+custom submission form fields:
+
+```bash
+docker compose --profile tools run --rm --no-deps cli registry-loader -m /usr/local/dspace/config/registries/local-types.xml
+```
+
 ### Configure
 
 Copy `.env.example` to `.env` and edit it. This is **mandatory**. All

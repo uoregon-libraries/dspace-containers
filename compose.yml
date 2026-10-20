@@ -62,6 +62,8 @@ x-rest-env: &rest-env
   embargo__P__field__P__terms: dc.description.embargo
   embargo__P__field__P__lift: dc.description.embargo
 
+  metadata__P__hide__P__local__P__collection: true
+
   # A Java heap OOM leaves Tomcat running but broken, so make the JVM exit
   # and let the restart policy bring it back
   JAVA_OPTS: -XX:+ExitOnOutOfMemoryError ${REST_JAVA_OPTS:-}
