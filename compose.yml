@@ -182,6 +182,9 @@ services:
       # How many SSR worker processes pm2 runs
       PM2_INSTANCES: ${PM2_INSTANCES:-max}
 
+      # Replace any SSR worker whose memory grows past this (unset: no limit)
+      PM2_MAX_MEMORY_RESTART: ${PM2_MAX_MEMORY_RESTART:-}
+
       # Server-side rendering talks to REST directly over the internal
       # network instead of going out through the public URL
       DSPACE_REST_SSRBASEURL: http://rest:8080/server
