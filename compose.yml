@@ -68,10 +68,12 @@ x-rest-env: &rest-env
   # and let the restart policy bring it back
   JAVA_OPTS: -XX:+ExitOnOutOfMemoryError ${REST_JAVA_OPTS:-}
 
+  # No self-registration unless `.env` turns it on
   plugin__P__sequence__P__org__P__dspace__P__authenticate__P__AuthenticationMethod: >-
-    org.dspace.authenticate.IPAuthentication,
-    org.dspace.authenticate.PasswordAuthentication,
-    org.dspace.authenticate.SamlAuthentication
+    ${AUTHENTICATION_METHODS:-org.dspace.authenticate.IPAuthentication,
+    org.dspace.authenticate.SamlAuthentication,
+    org.dspace.authenticate.PasswordAuthentication}
+  user__P__registration: ${USER_REGISTRATION:-false}
   authentication__D__saml__P__relying__D__party__D__id: ${SAML_RELYING_PARTY_ID:?SAML_RELYING_PARTY_ID must be set}
   authentication__D__saml__P__autoregister: ${SAML_AUTOREGISTER:-false}
   authentication__D__saml__P__login__P__specialgroup: ${SAML_DEFAULT_GROUPS:-default-user}

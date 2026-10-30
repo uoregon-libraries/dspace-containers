@@ -183,7 +183,9 @@ re-provisions itself when it starts.
 
 ### Create local admin
 
-You'll probably want a local admin for easier access. Use the `cli` service:
+You'll probably want a local admin for easier access. It logs in with a
+password, so if you set `AUTHENTICATION_METHODS` in `.env`, keep
+`org.dspace.authenticate.PasswordAuthentication` in it. Use the `cli` service:
 
 ```bash
 docker compose --profile tools run --rm --no-deps cli create-administrator -e admin@example.org -p adm -f Ad -l Min
