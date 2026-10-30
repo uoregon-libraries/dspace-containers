@@ -60,6 +60,7 @@ RUN npm install --global pm2
 COPY --chown=node:node --from=build /app/dist /app/dist
 COPY --chown=node:node --from=build /app/config /app/config
 COPY --chown=node:node conf/angular/dspace-ui.config.js /app/dspace-ui.config.js
+COPY --chown=node:node conf/angular/watchdog.js /app/watchdog.js
 
 # We add this after everything else, and separately per image target, so that
 # config changes aren't causing yarn rebuilds
@@ -71,9 +72,8 @@ USER node
 ENV NODE_ENV=production
 EXPOSE 4000
 
-# "/" isn't in the default ssr.paths list, so this serves the cheap CSR index
-# rather than triggering a full server-side render every interval
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s \
-  CMD wget -q -O /dev/null http://127.0.0.1:4000/ || exit 1
+# No HEALTHCHECK: podman builds OCI images, which silently drop it, and a check
+# of the CSR shell wouldn't notice broken SSR anyway. watchdog.js, run by pm2,
+# does the job instead.
 
 CMD ["pm2-runtime", "start", "dspace-ui.config.js"]
