@@ -116,6 +116,24 @@ to whatever `PUBLIC_URL` is set to, such as a test site.
 
 Handles that don't exist return `"responseCode":100` (not found). That's fine.
 
+curl only reaches the server's REST API, which nothing that resolves handles
+uses. For the real check, use `bin/check-handle` (`make bin/check-handle`; it's
+a static binary, so you can build it elsewhere and copy it over). It talks to
+the server the way hdl.handle.net does, with the handle protocol on all three
+ports, and checks the server's keys against the registry:
+
+```bash
+# From somewhere else, so the firewall gets tested too
+bin/check-handle -server <public IP> <prefix>/<id>
+```
+
+Give it a handle that exists. Anything marked FAIL needs fixing. Until
+handle.net registers the server, some warnings are expected: that the registry
+doesn't list it, and, if setup generated new keys, that its key isn't
+registered. If you copied keys from an existing server (step 2), the signature
+check should say the key is registered for that server's address instead;
+if it doesn't, the keys that got copied aren't the ones handle.net has.
+
 With `handle` in `COMPOSE_PROFILES`, the systemd unit (see "Running under
 systemd" in README.md) starts it along with everything else from here on. For
 manual commands, use `scripts/compose` (or pass `--profile handle`): some
@@ -140,7 +158,13 @@ curl -s https://hdl.handle.net/api/handles/0.NA/<prefix> | grep '"address"'
 
 # Should redirect to the production site
 curl -sI https://hdl.handle.net/<prefix>/<id> | grep -i location
+
+# Should list this server's IP, and report no failures or warnings
+bin/check-handle <prefix>/<id>
 ```
+
+Without `-server`, check-handle tests whichever servers the registry lists, so
+this also confirms the registry has this server's keys and ports.
 
 Resolvers cache the registry record for up to a day (its TTL is 86400).
 
@@ -163,6 +187,8 @@ So:
 
 - **Nothing to do for new items.** Their handles are in the database, so they
   resolve right away.
+- **Checking it:** `bin/check-handle <prefix>/<id>` tests the registered server
+  end to end, and is safe to run any time.
 - **Back up the handle directory.** It holds private keys, and losing it means
   another round with handle.net. `scripts/backup` covers it as long as the
   volume lives under `volumes/handle-server` (see "Backups" in README.md).
