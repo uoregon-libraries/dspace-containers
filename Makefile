@@ -2,7 +2,7 @@ TPL := tps-templates
 
 .PHONY: tools base-template final-templates clean
 
-tools: bin/htmlfmt bin/assemble bin/render-crontab
+tools: bin/htmlfmt bin/assemble bin/render-crontab bin/backup
 
 bin/htmlfmt: tools/htmlfmt/*.go tools/htmlfmt/go.mod
 	mkdir -p bin
@@ -15,6 +15,12 @@ bin/assemble: tools/assemble/*.go tools/assemble/go.mod
 bin/render-crontab: tools/render-crontab/*.go tools/render-crontab/go.mod
 	mkdir -p bin
 	go build -C tools/render-crontab -o $(abspath bin/render-crontab)
+
+# Static, so it can be built elsewhere and copied to the server. Install it
+# outside the checkout: see docs/backups.md.
+bin/backup: tools/backup/*.go tools/backup/go.mod
+	mkdir -p bin
+	CGO_ENABLED=0 go build -C tools/backup -o $(abspath bin/backup)
 
 # Reformat the raw SingleFile snapshot and extract its CSS to sb.css. The
 # result still needs the manual cleanup described in tps-templates/README.md

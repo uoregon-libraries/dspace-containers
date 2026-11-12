@@ -164,7 +164,7 @@ So:
 - **Nothing to do for new items.** Their handles are in the database, so they
   resolve right away.
 - **Back up the handle directory.** It holds private keys, and losing it means
-  another round with handle.net. `scripts/backup` covers it as long as the
+  another round with handle.net. `backup main` covers it as long as the
   volume lives under `volumes/handle-server` (see "Backups" in README.md).
 - **Logs:** `docker compose logs handle`. A steady stream of
   `HandlePlugin @ Called haveNA` lines at INFO is normal. The handle server

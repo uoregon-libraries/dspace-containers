@@ -80,8 +80,9 @@ together some weird magic to make it work in a semi-nice way. See
 
 ## Backups
 
-DSpace is a bit complex where backups are concerned, so we have two custom
-scripts for doing backups. See [docs/backups.md](docs/backups.md) for details.
+DSpace is a bit complex where backups are concerned, so we have a custom tool
+(`tools/backup`), with one job for the main backup and one for Solr. See
+[docs/backups.md](docs/backups.md) for details.
 
 ## Container logs
 
