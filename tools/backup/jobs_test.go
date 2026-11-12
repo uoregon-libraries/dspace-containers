@@ -320,6 +320,33 @@ func TestMainJobRequiredParts(t *testing.T) {
 	}
 }
 
+// TestMainJobLinksToLatest makes sure a snapshot this tool didn't make, like
+// one from an older backup script, is still hard-linked against when
+// "latest" points at it
+func TestMainJobLinksToLatest(t *testing.T) {
+	e := newTestEnv(t)
+	old := filepath.Join(e.dest, "old-2026-10-01")
+	os.Mkdir(old, 0o700)
+	if out, err := exec.Command("rsync", "-a", e.assetstore+"/", filepath.Join(old, "assetstore")+"/").CombinedOutput(); err != nil {
+		t.Fatalf("copying the assetstore: %s: %s", err, out)
+	}
+	if err := os.Symlink("old-2026-10-01", filepath.Join(e.dest, "latest")); err != nil {
+		t.Fatal(err)
+	}
+
+	if j := e.runMain(t, "2026-11-01_050000"); j.failed {
+		t.Fatal("run failed")
+	}
+	snap := filepath.Join(e.dest, "2026-11-01_050000")
+	sameFile(t, filepath.Join(old, "assetstore/12/34/56/123456"), filepath.Join(snap, "assetstore/12/34/56/123456"))
+	mustLink(t, e.dest, "2026-11-01_050000")
+	// Retention leaves alone what it didn't make
+	if j := e.runMain(t, "2026-12-01_050000"); j.failed {
+		t.Fatal("second run failed")
+	}
+	mustExist(t, old)
+}
+
 func TestInterrupted(t *testing.T) {
 	e := newTestEnv(t)
 	ctx, cancel := context.WithCancel(context.Background())

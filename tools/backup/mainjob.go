@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -79,7 +80,10 @@ func (j *job) dumpDB(ctx context.Context) error {
 	}
 	defer f.Close()
 
-	gz := gzip.NewWriter(f)
+	// gzip writes about 240 bytes at a time, and a network filesystem can
+	// turn every write into a round trip to the server
+	buf := bufio.NewWriterSize(f, 1<<20)
+	gz := gzip.NewWriter(buf)
 	tail := &tailBuffer{max: 4096}
 	out := &firstError{w: io.MultiWriter(gz, tail)}
 	cmd := j.podman(ctx, "exec", db, "pg_dump", "-U", "dspace", "--no-owner", "--no-privileges", "dspace")
@@ -96,6 +100,9 @@ func (j *job) dumpDB(ctx context.Context) error {
 		return fmt.Errorf("pg_dump: %w", runErr)
 	}
 	if err := gz.Close(); err != nil {
+		return fmt.Errorf("writing %s: %w", path, err)
+	}
+	if err := buf.Flush(); err != nil {
 		return fmt.Errorf("writing %s: %w", path, err)
 	}
 	// Surfaces errors that a network filesystem may otherwise only report
