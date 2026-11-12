@@ -39,6 +39,12 @@ Each run writes a snapshot dir named for its start time, `<date>_<time>/`, and
 `latest` points at the newest one. Files unchanged since the previous snapshot
 are hard links to avoid tons of disk usage.
 
+Whatever `latest` points at when a run starts is also used for hard links,
+even a dir the tool didn't make (e.g., a backup from another script), as long
+as it has the same layout (`assetstore/`, `volumes/`, etc.). Only dirs named
+`<date>_<time>` count as snapshots otherwise, so retention never deletes
+anything else.
+
 `backup main` writes snapshots to `<dest>/`:
 
 - `db/dspace.sql.gz`: `pg_dump` of the database

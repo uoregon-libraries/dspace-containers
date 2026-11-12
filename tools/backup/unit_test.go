@@ -203,6 +203,21 @@ func TestLinkDests(t *testing.T) {
 	if len(got) != maxIncompleteLinks+1 || got[len(got)-1] != filepath.Join(dest, "2026-10-02_050000", "files") {
 		t.Errorf("with many incomplete copies: got %v", got)
 	}
+
+	// "latest" is used too, even when it isn't a snapshot this tool named, but
+	// only once
+	mkSnapshots(t, dest, map[string][]string{"old-2026-09-30": {"files", "nothing"}})
+	j.prev = filepath.Join(dest, "old-2026-09-30")
+	if got := j.linkDests("nothing"); !slices.Equal(got, []string{filepath.Join(j.prev, "nothing")}) {
+		t.Errorf("with latest outside the snapshots: got %v", got)
+	}
+	if got := j.linkDests("files"); got[len(got)-1] != filepath.Join(j.prev, "files") {
+		t.Errorf("with latest outside the snapshots: got %v", got)
+	}
+	j.prev = filepath.Join(dest, "2026-10-02_050000")
+	if got := j.linkDests("files"); len(got) != maxIncompleteLinks+1 {
+		t.Errorf("with latest as the newest good copy: got %v", got)
+	}
 }
 
 func TestRootOnly(t *testing.T) {

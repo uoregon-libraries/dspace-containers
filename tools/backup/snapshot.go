@@ -348,24 +348,31 @@ func newestWith(dest string, snaps []string, part string) string {
 }
 
 // linkDests returns the dirs rsync should hard-link unchanged files from when
-// copying part: its newest good copy, and any incomplete copies newer than
-// that, so what a failed run did copy isn't copied again
+// copying part: its newest good copy, any incomplete copies newer than that
+// (so what a failed run did copy isn't copied again), and its copy in
+// whatever "latest" pointed at when the run began, which may be a snapshot
+// this tool didn't make, e.g., one from an older backup script
 func (j *job) linkDests(part string) []string {
+	var dirs []string
 	snaps, err := listSnapshots(j.dest)
 	if err != nil {
-		j.log.Printf("%s: can't look for earlier snapshots, so copying everything: %s", part, err)
-		return nil
+		j.log.Printf("%s: can't look for earlier snapshots: %s", part, err)
 	}
-	var dirs []string
 	incomplete := 0
 	for i := len(snaps) - 1; i >= 0; i-- {
 		dir := filepath.Join(j.dest, snaps[i], part)
 		if isDir(dir) {
-			return append(dirs, dir)
+			dirs = append(dirs, dir)
+			break
 		}
 		if incomplete < maxIncompleteLinks && isDir(dir+incompleteSuffix) {
 			dirs = append(dirs, dir+incompleteSuffix)
 			incomplete++
+		}
+	}
+	if j.prev != "" {
+		if dir := filepath.Join(j.prev, part); isDir(dir) && !slices.Contains(dirs, dir) {
+			dirs = append(dirs, dir)
 		}
 	}
 	return dirs
@@ -375,7 +382,11 @@ func (j *job) linkDests(part string) []string {
 // whatever is unchanged since earlier snapshots. Extra args go to rsync.
 func (j *job) snapshotDir(ctx context.Context, src, sub string, extra ...string) error {
 	args := append([]string{"-aH", "--numeric-ids", "--stats"}, extra...)
-	for _, dir := range j.linkDests(sub) {
+	dirs := j.linkDests(sub)
+	if len(dirs) == 0 {
+		j.log.Printf("%s: no earlier copy to hard-link against, so this copies everything", sub)
+	}
+	for _, dir := range dirs {
 		args = append(args, "--link-dest="+dir)
 	}
 	dst := filepath.Join(j.run, sub)
